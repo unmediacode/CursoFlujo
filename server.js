@@ -26,6 +26,35 @@ const db = createClient({
   authToken: TURSO_AUTH_TOKEN,
 });
 
+async function ensureClientsSchema() {
+  await db.execute(`
+    create table if not exists clients (
+      id integer primary key,
+      day text not null,
+      name text not null,
+      phone text,
+      notes text,
+      created_at text default (datetime('now'))
+    )
+  `);
+
+  try {
+    const info = await db.execute('pragma table_info(clients)');
+    const cols = new Set((info.rows || []).map((row) => row.name));
+    if (!cols.has('phone')) {
+      await db.execute('alter table clients add column phone text');
+    }
+    if (!cols.has('notes')) {
+      await db.execute('alter table clients add column notes text');
+    }
+  } catch (err) {
+    console.error('[schema] Error comprobando columnas de clients', err);
+    throw err;
+  }
+
+  await db.execute('create index if not exists idx_clients_day on clients(day)');
+}
+
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -155,30 +184,7 @@ app.post('/api/init', async (req, res) => {
 // Inicializa tabla para clientes por día
 app.post('/api/init-clients', async (req, res) => {
   try {
-    await db.execute(`
-      create table if not exists clients (
-        id integer primary key,
-        day text not null,
-        name text not null,
-        phone text,
-        notes text,
-        created_at text default (datetime('now'))
-      )
-    `);
-
-    try {
-      await db.execute('alter table clients add column phone text');
-    } catch (err) {
-      if (!/duplicate column name/i.test(err.message)) throw err;
-    }
-
-    try {
-      await db.execute('alter table clients add column notes text');
-    } catch (err) {
-      if (!/duplicate column name/i.test(err.message)) throw err;
-    }
-
-    await db.execute('create index if not exists idx_clients_day on clients(day)');
+    await ensureClientsSchema();
     res.json({ ok: true });
   } catch (err) {
     console.error(err);
@@ -353,6 +359,16 @@ app.post('/api/exec', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`[server] escuchando en http://localhost:${PORT}`);
-});
+async function start() {
+  try {
+    await ensureClientsSchema();
+    app.listen(PORT, () => {
+      console.log(`[server] escuchando en http://localhost:${PORT}`);
+    });
+  } catch (err) {
+    console.error('[server] No se pudo inicializar el esquema de clients', err);
+    process.exit(1);
+  }
+}
+
+start();
