@@ -232,8 +232,9 @@ a:hover { text-decoration: underline; }
   box-shadow: 0 0 0 2px color-mix(in oklab, var(--accent) 26%, transparent) inset;
 }
 .calendar__cell.is-weekend {
-  background: color-mix(in oklab, var(--accent) 10%, var(--surface));
-  border-color: color-mix(in oklab, var(--accent) 28%, var(--border));
+  /* Naranja suave para fondo y un borde un poco más intenso */
+  background: color-mix(in oklab, #fb923c 22%, var(--surface)); /* orange-400 */
+  border-color: color-mix(in oklab, #f97316 42%, var(--border)); /* orange-500 */
 }
 .calendar__date {
   font-weight: 700;
