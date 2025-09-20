@@ -429,8 +429,11 @@
               const date = new Date(iso + 'T00:00:00Z');
               const label = `${date.getUTCDate()}/${String(date.getUTCMonth()+1).padStart(2,'0')}/${date.getUTCFullYear()}`;
               const tags = buildClientTags(r);
+              const nameAttr = escapeHtml(r.name || '');
+              const phoneAttr = escapeHtml(r.phone || '');
+              const notesAttr = escapeHtml(r.notes || '');
               return `
-                <li data-iso="${iso}">
+                <li data-iso="${iso}" data-client-name="${nameAttr}" data-client-phone="${phoneAttr}" data-client-notes="${notesAttr}">
                   <div class="client-info">${tags}</div>
                   <small class="muted"> — ${label}</small>
                   <button type="button" class="link" data-open-day>Ver día</button>
@@ -484,7 +487,7 @@
               return `
               <li data-id="${r.id}" data-client-name="${nameAttr}" data-client-phone="${phoneAttr}" data-client-notes="${notesAttr}">
                 <div class="client-info">
-                  <span class="client-name" data-text data-client-detail>${escapeHtml(r.name)}</span>
+                  <span class="client-name" data-text data-client-detail role="button" tabindex="0" aria-label="Ver detalle de ${nameAttr}">${escapeHtml(r.name)}</span>
                 </div>
                 <span class="client-actions" data-actions>
                   <button type="button" class="link primary" data-edit="${r.id}">Editar</button>
