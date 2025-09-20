@@ -22,9 +22,17 @@
       <section class="container">
         <div class="calendar" aria-label="Calendario mensual">
           <div class="calendar__header">
-            <button class="cal-btn" id="prevMonth" aria-label="Mes anterior">‹</button>
+            <div class="left-actions">
+              <button class="cal-btn" id="prevBtn" aria-label="Anterior">‹</button>
+            </div>
             <h2 class="calendar__title" id="calTitle" aria-live="polite"></h2>
-            <button class="cal-btn" id="nextMonth" aria-label="Mes siguiente">›</button>
+            <div class="right-actions">
+              <button class="cal-btn" id="nextBtn" aria-label="Siguiente">›</button>
+            </div>
+          </div>
+          <div class="view-toggle" role="tablist" aria-label="Selector de vista">
+            <button id="viewMonth" class="view-toggle__btn is-active" role="tab" aria-selected="true">Mensual</button>
+            <button id="viewWeek" class="view-toggle__btn" role="tab" aria-selected="false">Semanal</button>
           </div>
 
           <div class="calendar__weekdays" aria-hidden="true">
@@ -86,8 +94,10 @@
 
         const titleEl = document.getElementById('calTitle');
         const gridEl = document.getElementById('calGrid');
-        const prevBtn = document.getElementById('prevMonth');
-        const nextBtn = document.getElementById('nextMonth');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const viewMonthBtn = document.getElementById('viewMonth');
+        const viewWeekBtn = document.getElementById('viewWeek');
 
         const API_BASE = 'http://localhost:3000';
 
@@ -135,6 +145,18 @@
         }
 
         let modalDayISO = null;
+        function startOfWeek(d) {
+          // Retorna lunes de la semana para una fecha dada (UTC)
+          const dt = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+          const weekday = dt.getUTCDay(); // 0=Dom..6=Sab
+          const diff = (weekday === 0 ? -6 : 1 - weekday); // mover a lunes
+          dt.setUTCDate(dt.getUTCDate() + diff);
+          return dt;
+        }
+
+        // Estado de vista
+        state.view = 'month';
+        state.weekAnchor = startOfWeek(new Date());
         function openModal(dayISO) {
           modalDayISO = dayISO;
           document.getElementById('clientDate').value = dayISO;
@@ -152,6 +174,9 @@
         }
 
         async function render() {
+          if (state.view === 'week') {
+            return renderWeek();
+          }
           const { year, month } = state;
           titleEl.textContent = monthNames[month] + ' ' + year;
 
@@ -216,15 +241,90 @@
           });
         }
 
+        async function fetchCountForDay(dayISO) {
+          try {
+            const res = await fetch(`${API_BASE}/api/clients?day=${dayISO}`);
+            const data = await res.json();
+            if (!data.ok) return 0;
+            return (data.rows || []).length;
+          } catch {
+            return 0;
+          }
+        }
+
+        async function renderWeek() {
+          const monday = startOfWeek(state.weekAnchor);
+          const days = [];
+          for (let i = 0; i < 7; i++) {
+            const d = new Date(monday);
+            d.setUTCDate(monday.getUTCDate() + i);
+            days.push(d);
+          }
+          const end = days[6];
+          const title = `${monday.getUTCDate()}/${monday.getUTCMonth()+1}/${monday.getUTCFullYear()} - ${end.getUTCDate()}/${end.getUTCMonth()+1}/${end.getUTCFullYear()}`;
+          titleEl.textContent = `Semana: ${title}`;
+
+          // Obtener conteos por día (7 peticiones)
+          const counts = {};
+          for (const d of days) {
+            const iso = `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`;
+            counts[iso] = await fetchCountForDay(iso);
+          }
+
+          gridEl.innerHTML = days.map((d, idx) => {
+            const iso = `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`;
+            const today = new Date();
+            const isToday = today.getUTCFullYear() === d.getUTCFullYear() && today.getUTCMonth() === d.getUTCMonth() && today.getUTCDate() === d.getUTCDate();
+            const isWeekend = idx >= 5; // sab=5, dom=6 en esta lista
+            const count = counts[iso] || 0;
+            return `
+              <button class="calendar__cell${isToday ? ' is-today' : ''}${isWeekend ? ' is-weekend' : ''}"
+                      role="gridcell" aria-selected="${isToday ? 'true' : 'false'}"
+                      data-iso="${iso}" data-weekend="${isWeekend}" data-other="false">
+                <span class="calendar__date">${d.getUTCDate()}</span>
+                ${count > 0 ? `<span class=\"calendar__badge\" title=\"${count} cliente(s)\">${count}</span>` : ''}
+              </button>
+            `;
+          }).join('');
+
+          gridEl.querySelectorAll('.calendar__cell').forEach((btn) => {
+            btn.addEventListener('click', () => {
+              const isWeekendAttr = btn.getAttribute('data-weekend') === 'true';
+              if (isWeekendAttr) return;
+              const iso = btn.getAttribute('data-iso');
+              openModal(iso);
+            });
+          });
+        }
+
         function addMonth(delta) {
           const d = new Date(state.year, state.month + delta, 1);
           state.year = d.getFullYear();
           state.month = d.getMonth();
           render();
         }
+        function addWeek(delta) {
+          const d = new Date(state.weekAnchor);
+          d.setUTCDate(d.getUTCDate() + delta * 7);
+          state.weekAnchor = d;
+          render();
+        }
 
-        prevBtn.addEventListener('click', () => addMonth(-1));
-        nextBtn.addEventListener('click', () => addMonth(1));
+        // Navegación según vista
+        prevBtn.addEventListener('click', () => state.view === 'month' ? addMonth(-1) : addWeek(-1));
+        nextBtn.addEventListener('click', () => state.view === 'month' ? addMonth(1) : addWeek(1));
+
+        // Toggle de vista
+        function setView(view) {
+          state.view = view;
+          viewMonthBtn.classList.toggle('is-active', view === 'month');
+          viewWeekBtn.classList.toggle('is-active', view === 'week');
+          viewMonthBtn.setAttribute('aria-selected', view === 'month' ? 'true' : 'false');
+          viewWeekBtn.setAttribute('aria-selected', view === 'week' ? 'true' : 'false');
+          render();
+        }
+        viewMonthBtn.addEventListener('click', () => setView('month'));
+        viewWeekBtn.addEventListener('click', () => setView('week'));
 
         // Cerrar modal
         document.querySelectorAll('[data-close-modal]').forEach(el => {
