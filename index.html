@@ -457,23 +457,17 @@
 
           // Click en celda: cambia a vista semanal centrada en esa fecha
           gridEl.querySelectorAll('.calendar__cell').forEach((btn) => {
-            btn.addEventListener('click', async (e) => {
+            btn.addEventListener('click', (e) => {
               // Si el clic fue en el badge, manejarlo aparte (ya que tiene su propio manejador)
               if (e.target.closest('.calendar__badge')) return;
-              
-              const isOther = btn.getAttribute('data-other') === 'true';
-              const isWeekendAttr = btn.getAttribute('data-weekend') === 'true';
-              if (isOther) return; // No hacer nada en celdas de otros meses
-              
+
+              if (btn.getAttribute('data-other') === 'true') return; // Ignorar celdas de otros meses
+
               const iso = btn.getAttribute('data-iso');
-              // Cambiar a vista semanal centrada en esta fecha
-              state.view = 'week';
-              state.weekAnchor = new Date(iso);
-              // Actualizar el botón de vista activa
-              document.querySelector('.view-toggle .active').classList.remove('active');
-              document.querySelector('.view-toggle [data-view="week"]').classList.add('active');
-              // Renderizar la vista semanal
-              await render();
+              const [year, monthIndex, day] = iso.split('-').map(Number);
+              const targetDate = new Date(year, monthIndex - 1, day);
+
+              setView('week', targetDate);
             });
           });
           // Click en el badge: abre el modal del día (incluso fines de semana)
@@ -576,13 +570,6 @@
           d.setDate(d.getDate() + (delta * 7));
           state.weekAnchor = d;
           render();
-        }
-        
-        function startOfWeek(date) {
-          const d = new Date(date);
-          const day = d.getUTCDay();
-          const diff = d.getUTCDate() - day + (day === 0 ? -6 : 1); // Ajuste para que la semana empiece en lunes
-          return new Date(d.setUTCDate(diff));
         }
 
         // Navegación según vista
