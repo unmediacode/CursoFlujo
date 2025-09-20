@@ -447,14 +447,6 @@ small.muted { color: var(--muted); }
   color: var(--primary);
   cursor: pointer;
 }
-.calendar__tag--phone {
-  background: color-mix(in oklab, #22c55e 38%, transparent);
-  color: #064e3b;
-}
-.calendar__tag--notes {
-  background: #facc15;
-  color: #854d0e;
-}
 .calendar__names .more { color: var(--muted); font-style: italic; }
 
 /* Responsivo fino */

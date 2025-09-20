@@ -176,14 +176,8 @@
         function buildClientTags(client) {
           if (!client) return '';
           const name = typeof client.name === 'string' ? client.name.trim() : '';
-          const phone = typeof client.phone === 'string' ? client.phone.trim() : '';
-          const notes = typeof client.notes === 'string' ? client.notes.trim() : '';
-          const attrs = `data-client-detail="true" role="button" tabindex="0"`;
-          const parts = [];
-          if (name) parts.push(`<span class="calendar__tag calendar__tag--name" ${attrs} aria-label="Ver detalle de ${escapeHtml(name)}">${escapeHtml(name)}</span>`);
-          if (phone) parts.push(`<span class="calendar__tag calendar__tag--phone">${escapeHtml(phone)}</span>`);
-          if (notes) parts.push(`<span class="calendar__tag calendar__tag--notes">${escapeHtml(notes)}</span>`);
-          return parts.join('');
+          if (!name) return '';
+          return `<span class="calendar__tag calendar__tag--name" data-client-detail role="button" tabindex="0" aria-label="Ver detalle de ${escapeHtml(name)}">${escapeHtml(name)}</span>`;
         }
 
         function buildCalendarEntry(client) {
