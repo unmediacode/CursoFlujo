@@ -105,6 +105,15 @@
 
         const API_BASE = 'http://localhost:3000';
 
+        function escapeHtml(str) {
+          return String(str)
+            .replaceAll('&', '&amp;')
+            .replaceAll('<', '&lt;')
+            .replaceAll('>', '&gt;')
+            .replaceAll('"', '&quot;')
+            .replaceAll("'", '&#039;');
+        }
+
         async function fetchSummary(year, month /* 0-11 */) {
           const y = year;
           const m = month + 1; // API espera 1..12
@@ -309,6 +318,17 @@
           }
         }
 
+        async function fetchClientsForDay(dayISO) {
+          try {
+            const res = await fetch(`${API_BASE}/api/clients?day=${dayISO}`);
+            const data = await res.json();
+            if (!data.ok) return [];
+            return data.rows || [];
+          } catch {
+            return [];
+          }
+        }
+
         async function renderWeek() {
           const monday = startOfWeek(state.weekAnchor);
           const days = [];
@@ -321,12 +341,11 @@
           const title = `${monday.getUTCDate()}/${monday.getUTCMonth()+1}/${monday.getUTCFullYear()} - ${end.getUTCDate()}/${end.getUTCMonth()+1}/${end.getUTCFullYear()}`;
           titleEl.textContent = `Semana: ${title}`;
 
-          // Obtener conteos por día (7 peticiones)
-          const counts = {};
-          for (const d of days) {
-            const iso = `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`;
-            counts[iso] = await fetchCountForDay(iso);
-          }
+          // Obtener listas de clientes por día (7 peticiones en paralelo)
+          const isos = days.map(d => `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`);
+          const lists = await Promise.all(isos.map(iso => fetchClientsForDay(iso)));
+          const dataByIso = {};
+          isos.forEach((iso, i) => { dataByIso[iso] = lists[i]; });
 
           const dow = ['Lu','Ma','Mi','Ju','Vi','Sa','Do'];
           gridEl.innerHTML = days.map((d, idx) => {
@@ -334,7 +353,10 @@
             const today = new Date();
             const isToday = today.getUTCFullYear() === d.getUTCFullYear() && today.getUTCMonth() === d.getUTCMonth() && today.getUTCDate() === d.getUTCDate();
             const isWeekend = idx >= 5; // sab=5, dom=6 en esta lista
-            const count = counts[iso] || 0;
+            const rows = dataByIso[iso] || [];
+            const count = rows.length;
+            const namesPreview = rows.slice(0, 3).map(r => `<li>${escapeHtml(r.name)}</li>`).join('');
+            const more = count > 3 ? `<li class=\"more\">+${count - 3} más</li>` : '';
             return `
               <button class="calendar__cell${isToday ? ' is-today' : ''}${isWeekend ? ' is-weekend' : ''}"
                       role="gridcell" aria-selected="${isToday ? 'true' : 'false'}"
@@ -342,6 +364,7 @@
                 <div class="calendar__dow">${dow[idx]}</div>
                 <span class="calendar__date">${d.getUTCDate()}</span>
                 ${count > 0 ? `<span class=\"calendar__badge\" title=\"${count} cliente(s)\">${count}</span>` : ''}
+                ${count > 0 ? `<ul class=\"calendar__names\">${namesPreview}${more}</ul>` : ''}
               </button>
             `;
           }).join('');

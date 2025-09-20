@@ -329,6 +329,15 @@ a:hover { text-decoration: underline; }
   line-height: 22px;
   text-align: center;
 }
+.calendar__names {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  max-height: 70px;
+  overflow: auto;
+  color: var(--muted);
+  font-size: .85rem;
+}
+.calendar__names .more { color: var(--muted); font-style: italic; }
 
 /* Responsivo fino */
 @media (max-width: 520px) {
