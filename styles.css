@@ -296,6 +296,42 @@ small.muted { color: var(--muted); }
   border-radius: 16px;
   box-shadow: var(--shadow);
 }
+.view-toggle {
+  margin: 12px 0 16px;
+  display: inline-flex;
+  gap: 8px;
+  padding: 6px;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--surface) 85%, transparent);
+  border: 1px solid color-mix(in oklab, var(--primary) 35%, var(--border));
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--surface) 60%, transparent);
+}
+.view-toggle__btn {
+  appearance: none;
+  border: none;
+  padding: 8px 18px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: .9rem;
+  letter-spacing: .2px;
+  background: transparent;
+  color: color-mix(in oklab, var(--text) 70%, var(--muted));
+  cursor: pointer;
+  transition: background .2s ease, color .2s ease, box-shadow .2s ease;
+}
+.view-toggle__btn:hover {
+  background: color-mix(in oklab, var(--primary) 16%, transparent);
+  color: var(--primary);
+}
+.view-toggle__btn.is-active {
+  background: linear-gradient(135deg, color-mix(in oklab, var(--primary) 70%, transparent), color-mix(in oklab, var(--accent) 40%, transparent));
+  color: var(--primary-ink);
+  box-shadow: 0 6px 14px rgba(34, 211, 238, .25);
+}
+.view-toggle__btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 40%, transparent);
+}
 .calendar__header {
   display: flex;
   align-items: center;
@@ -448,6 +484,35 @@ small.muted { color: var(--muted); }
   cursor: pointer;
 }
 .calendar__names .more { color: var(--muted); font-style: italic; }
+
+.help {
+  margin: 72px auto 48px;
+}
+.help h2 {
+  text-align: center;
+  margin-bottom: 28px;
+}
+.help-grid {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+.help-card {
+  padding: 18px;
+  border: 1px solid color-mix(in oklab, var(--primary) 22%, var(--border));
+  border-radius: 14px;
+  background: color-mix(in oklab, var(--surface) 90%, transparent);
+  box-shadow: 0 12px 24px rgba(15, 23, 42, .18);
+}
+.help-card h3 {
+  margin: 0 0 10px;
+  font-size: 1.05rem;
+}
+.help-card p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
 
 /* Responsivo fino */
 @media (max-width: 520px) {

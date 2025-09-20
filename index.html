@@ -3,17 +3,18 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Página Sencilla</title>
-    <meta name="description" content="Una página muy sencilla hecha con HTML y CSS." />
+    <title>Dosificación Mensual</title>
+    <meta name="description" content="Agenda de dosificación y control diario para farmacia." />
 
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
     <header class="site-header">
       <div class="container">
-        <h1 class="logo">Mi Página</h1>
+        <h1 class="logo">Dosificación Mensual</h1>
         <nav class="nav">
-          <a href="#inicio">Inicio</a>
+          <a href="#inicio">Calendario</a>
+          <a href="#ayuda">Ayuda</a>
         </nav>
       </div>
     </header>
@@ -129,6 +130,28 @@
           <ul id="searchResults" class="client-list" aria-live="polite"></ul>
         </div>
       </div>
+
+      <section id="ayuda" class="container help">
+        <h2>Guía rápida para el equipo de la farmacia</h2>
+        <div class="help-grid" role="list">
+          <article class="help-card" role="listitem">
+            <h3>Registrar un paciente</h3>
+            <p>Elige el día correspondiente en el calendario mensual, revisa las plazas disponibles y completa nombre, teléfono y notas relevantes (tratamiento, recordatorios, alergias...).</p>
+          </article>
+          <article class="help-card" role="listitem">
+            <h3>Controlar la semana</h3>
+            <p>Cambia a la vista semanal para ver solo los pacientes activos de lunes a viernes. Haz clic sobre el nombre para revisar o confirmar los detalles guardados.</p>
+          </article>
+          <article class="help-card" role="listitem">
+            <h3>Editar o anular</h3>
+            <p>Utiliza el botón <strong>Editar</strong> dentro del día para actualizar datos. Si el paciente cancela la recogida, pulsa <strong>Eliminar</strong> y libera la plaza.</p>
+          </article>
+          <article class="help-card" role="listitem">
+            <h3>Buscar rápidamente</h3>
+            <p>Desde el icono de lupa puedes localizar cualquier paciente por nombre y saltar directamente a su fecha de dosificación.</p>
+          </article>
+        </div>
+      </section>
     </main>
 
     <footer class="site-footer">
