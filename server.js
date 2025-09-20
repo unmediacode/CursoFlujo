@@ -157,10 +157,14 @@ app.delete('/api/clients/:id', async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id)) return res.status(400).json({ ok: false, error: 'id inválido' });
   try {
-    const rs = await db.execute({ sql: 'delete from clients where id = ? returning id', args: [id] });
-    const deleted = rs.rows?.[0]?.id != null;
-    if (!deleted) return res.status(404).json({ ok: false, error: 'Cliente no encontrado' });
-    res.json({ ok: true, id });
+    const rs = await db.execute({ sql: 'delete from clients where id = ?', args: [id] });
+    let affected = rs.rowsAffected;
+    if (affected == null) {
+      const ch = await db.execute('select changes() as c');
+      affected = Number(ch.rows?.[0]?.c ?? 0);
+    }
+    if (!affected) return res.status(404).json({ ok: false, error: 'Cliente no encontrado' });
+    res.json({ ok: true, id, deleted: affected });
   } catch (err) {
     console.error(err);
     res.status(500).json({ ok: false, error: err.message });
