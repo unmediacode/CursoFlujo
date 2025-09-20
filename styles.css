@@ -45,6 +45,8 @@ body {
 a { color: var(--primary); text-decoration: none; }
 a:hover { text-decoration: underline; }
 
+small.muted { color: var(--muted); }
+
 /* Header */
 .site-header {
   position: sticky;
@@ -264,6 +266,7 @@ a:hover { text-decoration: underline; }
 }
 .cal-btn:hover { background: color-mix(in oklab, var(--primary) 18%, transparent); }
 .cal-btn:active { transform: scale(.96); }
+.right-actions .cal-btn#searchBtn { width: auto; padding: 0 10px; font-size: 16px; }
 
 .calendar__weekdays {
   display: grid;

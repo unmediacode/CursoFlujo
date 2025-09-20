@@ -27,6 +27,7 @@
             </div>
             <h2 class="calendar__title" id="calTitle" aria-live="polite"></h2>
             <div class="right-actions">
+              <button class="cal-btn" id="searchBtn" aria-label="Buscar clientes">🔎</button>
               <button class="cal-btn" id="nextBtn" aria-label="Siguiente">›</button>
             </div>
           </div>
@@ -75,6 +76,26 @@
           </form>
         </div>
       </div>
+
+      <!-- Modal de búsqueda -->
+      <div class="modal" id="searchModal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="searchTitle">
+        <div class="modal__overlay" data-close-search></div>
+        <div class="modal__content" role="document">
+          <h3 id="searchTitle">Buscar clientes por nombre</h3>
+          <form id="searchForm">
+            <div class="form-row">
+              <label>Nombre contiene</label>
+              <input type="text" id="searchInput" placeholder="Ej. Juan" required />
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="btn">Buscar</button>
+              <button type="button" class="btn btn--secondary" data-close-search>Cancelar</button>
+            </div>
+            <p class="form-error" id="searchError" hidden></p>
+          </form>
+          <ul id="searchResults" class="client-list" aria-live="polite"></ul>
+        </div>
+      </div>
     </main>
 
     <footer class="site-footer">
@@ -102,6 +123,7 @@
         const nextBtn = document.getElementById('nextBtn');
         const viewMonthBtn = document.getElementById('viewMonth');
         const viewWeekBtn = document.getElementById('viewWeek');
+        const searchBtn = document.getElementById('searchBtn');
 
         const API_BASE = 'http://localhost:3000';
 
@@ -243,6 +265,63 @@
           const modal = document.getElementById('clientModal');
           modal.setAttribute('aria-hidden', 'true');
           document.body.style.overflow = '';
+        }
+
+        // Búsqueda
+        function openSearch() {
+          document.getElementById('searchInput').value = '';
+          document.getElementById('searchError').hidden = true;
+          document.getElementById('searchResults').innerHTML = '';
+          document.getElementById('searchModal').setAttribute('aria-hidden', 'false');
+          document.body.style.overflow = 'hidden';
+        }
+        function closeSearch() {
+          document.getElementById('searchModal').setAttribute('aria-hidden', 'true');
+          document.body.style.overflow = '';
+        }
+        async function performSearch(name) {
+          const errEl = document.getElementById('searchError');
+          const list = document.getElementById('searchResults');
+          errEl.hidden = true; errEl.textContent = '';
+          list.innerHTML = '<li class="muted">Buscando...</li>';
+          try {
+            const res = await fetch(`${API_BASE}/api/clients/search?name=${encodeURIComponent(name)}`);
+            const data = await res.json();
+            if (!res.ok || !data.ok) {
+              errEl.textContent = data.error || 'Error en la búsqueda';
+              errEl.hidden = false;
+              list.innerHTML = '';
+              return;
+            }
+            const rows = data.rows || [];
+            if (rows.length === 0) {
+              list.innerHTML = '<li class="muted">Sin resultados</li>';
+              return;
+            }
+            list.innerHTML = rows.map(r => {
+              const iso = r.day;
+              const date = new Date(iso + 'T00:00:00Z');
+              const label = `${date.getUTCDate()}/${String(date.getUTCMonth()+1).padStart(2,'0')}/${date.getUTCFullYear()}`;
+              return `<li data-iso="${iso}"><span class="client-name">${escapeHtml(r.name)}</span><small class="muted"> — ${label}</small> <button type=\"button\" class=\"link\" data-open-day>Ver día</button></li>`;
+            }).join('');
+            // Ir al día desde resultados
+            list.querySelectorAll('[data-open-day]').forEach(btn => {
+              btn.addEventListener('click', () => {
+                const iso = btn.closest('li').getAttribute('data-iso');
+                closeSearch();
+                // Cambiar vista al mes del resultado y abrir modal del día
+                const d = new Date(iso + 'T00:00:00Z');
+                state.year = d.getUTCFullYear();
+                state.month = d.getUTCMonth();
+                state.view = 'month';
+                render().then(() => openModal(iso));
+              });
+            });
+          } catch (e) {
+            errEl.textContent = 'Error de red';
+            errEl.hidden = false;
+            list.innerHTML = '';
+          }
         }
 
         async function loadClientsInModal(dayISO) {
@@ -492,6 +571,15 @@
         // Cerrar modal
         document.querySelectorAll('[data-close-modal]').forEach(el => {
           el.addEventListener('click', closeModal);
+        });
+        // Búsqueda: abrir/cerrar y submit
+        searchBtn.addEventListener('click', openSearch);
+        document.querySelectorAll('[data-close-search]').forEach(el => el.addEventListener('click', closeSearch));
+        document.getElementById('searchForm').addEventListener('submit', (e) => {
+          e.preventDefault();
+          const q = document.getElementById('searchInput').value.trim();
+          if (!q) return;
+          performSearch(q);
         });
         // Enviar formulario de modal
         document.getElementById('clientForm').addEventListener('submit', async (e) => {

@@ -26,6 +26,40 @@ const db = createClient({
   authToken: TURSO_AUTH_TOKEN,
 });
 
+// Buscar clientes por nombre (opcional filtrar por año/mes)
+app.get('/api/clients/search', async (req, res) => {
+  const { name } = req.query;
+  const year = req.query.year ? parseInt(req.query.year, 10) : null;
+  const month = req.query.month ? parseInt(req.query.month, 10) : null; // 1..12
+  if (!name || String(name).trim() === '') {
+    return res.status(400).json({ ok: false, error: 'Parámetro name requerido' });
+  }
+  const term = `%${String(name).trim()}%`;
+  let sql = 'select id, name, day, created_at from clients where lower(name) like lower(?)';
+  const args = [term];
+  if (year && month) {
+    const yyyy = String(year).padStart(4, '0');
+    const mm = String(month).padStart(2, '0');
+    const start = `${yyyy}-${mm}-01`;
+    const nextMonth = month === 12 ? `${year + 1}-01-01` : `${yyyy}-${String(month + 1).padStart(2, '0')}-01`;
+    sql += ' and day >= ? and day < ?';
+    args.push(start, nextMonth);
+  } else if (year && !month) {
+    const start = `${String(year).padStart(4,'0')}-01-01`;
+    const end = `${String(year+1).padStart(4,'0')}-01-01`;
+    sql += ' and day >= ? and day < ?';
+    args.push(start, end);
+  }
+  sql += ' order by day asc, id asc';
+  try {
+    const rs = await db.execute({ sql, args });
+    res.json({ ok: true, rows: rs.rows });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 // Actualizar nombre de cliente por id
 app.put('/api/clients/:id', async (req, res) => {
   const id = Number(req.params.id);
