@@ -483,19 +483,22 @@
               list.innerHTML = '<li class="muted">Sin clientes para este día</li>';
               return;
             }
-            list.innerHTML = rows.map(r => `
-              <li data-id="${r.id}">
+            list.innerHTML = rows.map(r => {
+              const nameAttr = escapeHtml(r.name || '');
+              const phoneAttr = escapeHtml(r.phone || '');
+              const notesAttr = escapeHtml(r.notes || '');
+              return `
+              <li data-id="${r.id}" data-client-name="${nameAttr}" data-client-phone="${phoneAttr}" data-client-notes="${notesAttr}">
                 <div class="client-info">
-                  <span class="client-name" data-text>${escapeHtml(r.name)}</span>
-                  ${r.phone ? `<span class="client-phone calendar__tag calendar__tag--phone">${escapeHtml(r.phone)}</span>` : ''}
-                  ${r.notes ? `<span class="client-notes calendar__tag calendar__tag--notes">${escapeHtml(r.notes)}</span>` : ''}
+                  <span class="client-name" data-text data-client-detail>${escapeHtml(r.name)}</span>
                 </div>
                 <span class="client-actions" data-actions>
                   <button type="button" class="link primary" data-edit="${r.id}">Editar</button>
                   <button type="button" class="link danger" data-del="${r.id}">Eliminar</button>
                 </span>
               </li>
-            `).join('');
+            `;
+            }).join('');
 
             // Delegar eventos para editar/eliminar inline
             list.querySelectorAll('[data-edit]').forEach(btn => {
@@ -504,6 +507,7 @@
             list.querySelectorAll('[data-del]').forEach(btn => {
               btn.addEventListener('click', () => enterDeleteConfirm(btn.closest('li'), dayISO));
             });
+            attachClientDetailHandlers(list);
           } catch (e) {
             list.innerHTML = '<li class="error">Error de red</li>';
           }
