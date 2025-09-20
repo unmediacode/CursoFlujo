@@ -178,9 +178,9 @@
           const name = typeof client.name === 'string' ? client.name.trim() : '';
           const phone = typeof client.phone === 'string' ? client.phone.trim() : '';
           const notes = typeof client.notes === 'string' ? client.notes.trim() : '';
-          const attrs = `data-client-detail="true" data-client-name="${escapeHtml(name)}" data-client-phone="${escapeHtml(phone)}" data-client-notes="${escapeHtml(notes)}"`;
+          const attrs = `data-client-detail="true" data-client-name="${escapeHtml(name)}" data-client-phone="${escapeHtml(phone)}" data-client-notes="${escapeHtml(notes)}" role="button" tabindex="0"`;
           const parts = [];
-          if (name) parts.push(`<button type="button" class="calendar__tag calendar__tag--name" ${attrs}>${escapeHtml(name)}</button>`);
+          if (name) parts.push(`<span class="calendar__tag calendar__tag--name" ${attrs} aria-label="Ver detalle de ${escapeHtml(name)}">${escapeHtml(name)}</span>`);
           if (phone) parts.push(`<span class="calendar__tag calendar__tag--phone">${escapeHtml(phone)}</span>`);
           if (notes) parts.push(`<span class="calendar__tag calendar__tag--notes">${escapeHtml(notes)}</span>`);
           return parts.join('');
@@ -221,6 +221,16 @@
                 phone: el.getAttribute('data-client-phone') || '',
                 notes: el.getAttribute('data-client-notes') || ''
               });
+            });
+            el.addEventListener('keydown', (ev) => {
+              if (ev.key === 'Enter' || ev.key === ' ') {
+                ev.preventDefault();
+                openClientDetail({
+                  name: el.getAttribute('data-client-name') || '',
+                  phone: el.getAttribute('data-client-phone') || '',
+                  notes: el.getAttribute('data-client-notes') || ''
+                });
+              }
             });
           });
         }
