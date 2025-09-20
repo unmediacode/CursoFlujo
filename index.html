@@ -114,6 +114,63 @@
             .replaceAll("'", '&#039;');
         }
 
+        // UI helpers: edición inline
+        function enterEdit(li, dayISO) {
+          const id = li.getAttribute('data-id');
+          const nameEl = li.querySelector('[data-text]');
+          const actions = li.querySelector('[data-actions]');
+          const current = nameEl.textContent.trim();
+          li.classList.add('is-editing');
+          nameEl.innerHTML = `<input type="text" class="inline-input" value="${escapeHtml(current)}" />`;
+          actions.innerHTML = `
+            <button type="button" class="link primary" data-save>Guardar</button>
+            <button type="button" class="link" data-cancel>Cancelar</button>
+          `;
+          actions.querySelector('[data-save]').addEventListener('click', async () => {
+            const val = li.querySelector('.inline-input').value.trim();
+            if (!val || val === current) { exitEdit(li, current); return; }
+            await updateClientName(id, val, dayISO);
+          });
+          actions.querySelector('[data-cancel]').addEventListener('click', () => exitEdit(li, current));
+        }
+
+        function exitEdit(li, text) {
+          const nameEl = li.querySelector('[data-text]');
+          const actions = li.querySelector('[data-actions]');
+          nameEl.textContent = text;
+          actions.innerHTML = `
+            <button type="button" class="link primary" data-edit="${li.getAttribute('data-id')}">Editar</button>
+            <button type="button" class="link danger" data-del="${li.getAttribute('data-id')}">Eliminar</button>
+          `;
+          li.classList.remove('is-editing');
+          // Reenganchar eventos
+          actions.querySelector('[data-edit]').addEventListener('click', () => enterEdit(li, document.getElementById('clientDate').value));
+          actions.querySelector('[data-del]').addEventListener('click', () => enterDeleteConfirm(li, document.getElementById('clientDate').value));
+        }
+
+        // UI helpers: confirmación de borrado inline
+        function enterDeleteConfirm(li, dayISO) {
+          const id = li.getAttribute('data-id');
+          const actions = li.querySelector('[data-actions]');
+          const prev = actions.innerHTML;
+          actions.setAttribute('data-prev', prev);
+          actions.innerHTML = `
+            <span class="confirm-text">¿Eliminar?</span>
+            <button type="button" class="link danger" data-confirm>Confirmar</button>
+            <button type="button" class="link" data-cancel>Cancelar</button>
+          `;
+          actions.querySelector('[data-confirm]').addEventListener('click', async () => {
+            await deleteClient(id, dayISO);
+          });
+          actions.querySelector('[data-cancel]').addEventListener('click', () => {
+            actions.innerHTML = actions.getAttribute('data-prev');
+            actions.removeAttribute('data-prev');
+            // Reenganchar eventos
+            actions.querySelector('[data-edit]').addEventListener('click', () => enterEdit(li, dayISO));
+            actions.querySelector('[data-del]').addEventListener('click', () => enterDeleteConfirm(li, dayISO));
+          });
+        }
+
         async function fetchSummary(year, month /* 0-11 */) {
           const y = year;
           const m = month + 1; // API espera 1..12
@@ -209,15 +266,20 @@
             }
             list.innerHTML = rows.map(r => `
               <li data-id="${r.id}">
-                <span class="client-name">${r.name}</span>
-                <button type="button" class="link danger" data-del="${r.id}">Eliminar</button>
+                <span class="client-name" data-text>${escapeHtml(r.name)}</span>
+                <span class="client-actions" data-actions>
+                  <button type="button" class="link primary" data-edit="${r.id}">Editar</button>
+                  <button type="button" class="link danger" data-del="${r.id}">Eliminar</button>
+                </span>
               </li>
             `).join('');
+
+            // Delegar eventos para editar/eliminar inline
+            list.querySelectorAll('[data-edit]').forEach(btn => {
+              btn.addEventListener('click', () => enterEdit(btn.closest('li'), dayISO));
+            });
             list.querySelectorAll('[data-del]').forEach(btn => {
-              btn.addEventListener('click', async () => {
-                const id = btn.getAttribute('data-del');
-                await deleteClient(id, dayISO);
-              });
+              btn.addEventListener('click', () => enterDeleteConfirm(btn.closest('li'), dayISO));
             });
           } catch (e) {
             list.innerHTML = '<li class="error">Error de red</li>';
@@ -230,6 +292,25 @@
             const data = await res.json();
             if (!res.ok || !data.ok) {
               alert(data.error || 'No se pudo eliminar');
+              return;
+            }
+            await render();
+            await loadClientsInModal(dayISO);
+          } catch (e) {
+            alert('Error de red');
+          }
+        }
+
+        async function updateClientName(id, name, dayISO) {
+          try {
+            const res = await fetch(`${API_BASE}/api/clients/${id}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ name })
+            });
+            const data = await res.json();
+            if (!res.ok || !data.ok) {
+              alert(data.error || 'No se pudo actualizar');
               return;
             }
             await render();

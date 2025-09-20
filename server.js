@@ -26,6 +26,29 @@ const db = createClient({
   authToken: TURSO_AUTH_TOKEN,
 });
 
+// Actualizar nombre de cliente por id
+app.put('/api/clients/:id', async (req, res) => {
+  const id = Number(req.params.id);
+  const { name } = req.body ?? {};
+  if (!Number.isInteger(id)) return res.status(400).json({ ok: false, error: 'id inválido' });
+  if (!name || typeof name !== 'string' || !name.trim()) return res.status(400).json({ ok: false, error: 'name requerido' });
+  try {
+    const rs = await db.execute({ sql: 'update clients set name = ? where id = ?', args: [name.trim(), id] });
+    let affected = rs.rowsAffected;
+    if (affected == null) {
+      const ch = await db.execute('select changes() as c');
+      affected = Number(ch.rows?.[0]?.c ?? 0);
+    }
+    if (!affected) return res.status(404).json({ ok: false, error: 'Cliente no encontrado' });
+    res.json({ ok: true, id });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+ 
+
 const app = express();
 app.use(cors());
 app.use(express.json());
