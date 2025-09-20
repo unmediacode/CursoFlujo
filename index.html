@@ -209,6 +209,15 @@
           syncBodyScrollLock();
         }
 
+        function readClientField(el, selector, attr) {
+          const direct = attr ? el.getAttribute(attr) : null;
+          if (direct) return direct;
+          const container = el.closest('.calendar__entry') || el.closest('.client-info');
+          if (!container) return '';
+          const target = container.querySelector(selector);
+          return target ? target.textContent.trim() : '';
+        }
+
         function attachClientDetailHandlers(root = document) {
           if (!root) return;
           root.querySelectorAll('[data-client-detail]').forEach(el => {
@@ -217,18 +226,18 @@
             el.addEventListener('click', (ev) => {
               ev.stopPropagation();
               openClientDetail({
-                name: el.getAttribute('data-client-name') || '',
-                phone: el.getAttribute('data-client-phone') || '',
-                notes: el.getAttribute('data-client-notes') || ''
+                name: el.getAttribute('data-client-name') || readClientField(el, '.calendar__tag--name[data-client-detail]', null) || '',
+                phone: el.getAttribute('data-client-phone') || readClientField(el, '.calendar__tag--phone', null) || '',
+                notes: el.getAttribute('data-client-notes') || readClientField(el, '.calendar__tag--notes', null) || ''
               });
             });
             el.addEventListener('keydown', (ev) => {
               if (ev.key === 'Enter' || ev.key === ' ') {
                 ev.preventDefault();
                 openClientDetail({
-                  name: el.getAttribute('data-client-name') || '',
-                  phone: el.getAttribute('data-client-phone') || '',
-                  notes: el.getAttribute('data-client-notes') || ''
+                  name: el.getAttribute('data-client-name') || readClientField(el, '.calendar__tag--name[data-client-detail]', null) || '',
+                  phone: el.getAttribute('data-client-phone') || readClientField(el, '.calendar__tag--phone', null) || '',
+                  notes: el.getAttribute('data-client-notes') || readClientField(el, '.calendar__tag--notes', null) || ''
                 });
               }
             });
