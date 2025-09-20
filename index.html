@@ -178,7 +178,7 @@
           const name = typeof client.name === 'string' ? client.name.trim() : '';
           const phone = typeof client.phone === 'string' ? client.phone.trim() : '';
           const notes = typeof client.notes === 'string' ? client.notes.trim() : '';
-          const attrs = `data-client-detail="true" data-client-name="${escapeHtml(name)}" data-client-phone="${escapeHtml(phone)}" data-client-notes="${escapeHtml(notes)}" role="button" tabindex="0"`;
+          const attrs = `data-client-detail="true" role="button" tabindex="0"`;
           const parts = [];
           if (name) parts.push(`<span class="calendar__tag calendar__tag--name" ${attrs} aria-label="Ver detalle de ${escapeHtml(name)}">${escapeHtml(name)}</span>`);
           if (phone) parts.push(`<span class="calendar__tag calendar__tag--phone">${escapeHtml(phone)}</span>`);
@@ -187,8 +187,13 @@
         }
 
         function buildCalendarEntry(client) {
+          if (!client) return '';
+          const name = typeof client.name === 'string' ? client.name.trim() : '';
+          const phone = typeof client.phone === 'string' ? client.phone.trim() : '';
+          const notes = typeof client.notes === 'string' ? client.notes.trim() : '';
+          const attrs = `data-client-name="${escapeHtml(name)}" data-client-phone="${escapeHtml(phone)}" data-client-notes="${escapeHtml(notes)}"`;
           const content = buildClientTags(client);
-          return content ? `<li class="calendar__entry">${content}</li>` : '';
+          return content ? `<li class="calendar__entry" ${attrs}>${content}</li>` : '';
         }
 
         function syncBodyScrollLock() {
@@ -214,8 +219,14 @@
           if (direct) return direct;
           const container = el.closest('.calendar__entry') || el.closest('.client-info');
           if (!container) return '';
-          const target = container.querySelector(selector);
-          return target ? target.textContent.trim() : '';
+          if (attr && container.hasAttribute(attr)) {
+            return container.getAttribute(attr) || '';
+          }
+          if (selector) {
+            const target = selector === '.calendar__entry' ? container : container.querySelector(selector);
+            return target ? target.textContent.trim() : '';
+          }
+          return '';
         }
 
         function attachClientDetailHandlers(root = document) {
@@ -226,18 +237,18 @@
             el.addEventListener('click', (ev) => {
               ev.stopPropagation();
               openClientDetail({
-                name: el.getAttribute('data-client-name') || readClientField(el, '.calendar__tag--name[data-client-detail]', null) || '',
-                phone: el.getAttribute('data-client-phone') || readClientField(el, '.calendar__tag--phone', null) || '',
-                notes: el.getAttribute('data-client-notes') || readClientField(el, '.calendar__tag--notes', null) || ''
+                name: readClientField(el, '.calendar__entry', 'data-client-name') || '',
+                phone: readClientField(el, '.calendar__entry', 'data-client-phone') || '',
+                notes: readClientField(el, '.calendar__entry', 'data-client-notes') || ''
               });
             });
             el.addEventListener('keydown', (ev) => {
               if (ev.key === 'Enter' || ev.key === ' ') {
                 ev.preventDefault();
                 openClientDetail({
-                  name: el.getAttribute('data-client-name') || readClientField(el, '.calendar__tag--name[data-client-detail]', null) || '',
-                  phone: el.getAttribute('data-client-phone') || readClientField(el, '.calendar__tag--phone', null) || '',
-                  notes: el.getAttribute('data-client-notes') || readClientField(el, '.calendar__tag--notes', null) || ''
+                  name: readClientField(el, '.calendar__entry', 'data-client-name') || '',
+                  phone: readClientField(el, '.calendar__entry', 'data-client-phone') || '',
+                  notes: readClientField(el, '.calendar__entry', 'data-client-notes') || ''
                 });
               }
             });
