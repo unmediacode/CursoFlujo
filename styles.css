@@ -208,6 +208,95 @@ small.muted { color: var(--muted); }
 }
 .form-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 12px; }
 .form-error { color: #ef4444; margin-top: 8px; }
+.mini-cal {
+  margin: 8px 0 18px;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in oklab, var(--primary) 20%, var(--border));
+  background: color-mix(in oklab, var(--surface) 94%, transparent);
+}
+.mini-cal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  gap: 10px;
+}
+.mini-cal__title {
+  font-weight: 600;
+  font-size: .9rem;
+}
+.mini-cal__nav {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in oklab, var(--primary) 45%, var(--border));
+  background: color-mix(in oklab, var(--primary) 12%, transparent);
+  color: var(--primary);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: background .15s ease, transform .08s ease;
+}
+.mini-cal__nav:hover { background: color-mix(in oklab, var(--primary) 20%, transparent); }
+.mini-cal__nav:active { transform: scale(.94); }
+.mini-cal__weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  margin-bottom: 6px;
+  font-size: .7rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  text-align: center;
+}
+.mini-cal__grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+.mini-cal__day {
+  appearance: none;
+  border: none;
+  border-radius: 10px;
+  padding: 6px 0;
+  font-size: .75rem;
+  font-weight: 600;
+  color: var(--text);
+  background: color-mix(in oklab, var(--surface) 88%, transparent);
+  cursor: pointer;
+  transition: background .2s ease, color .2s ease, box-shadow .2s ease;
+}
+.mini-cal__day:hover {
+  background: color-mix(in oklab, var(--primary) 18%, transparent);
+  color: var(--primary);
+}
+.mini-cal__day.is-selected {
+  background: linear-gradient(135deg, color-mix(in oklab, var(--primary) 65%, transparent), color-mix(in oklab, var(--accent) 32%, transparent));
+  color: var(--primary-ink);
+  box-shadow: 0 4px 10px rgba(34, 211, 238, .25);
+  opacity: 1;
+}
+.mini-cal__day.is-disabled {
+  cursor: not-allowed;
+  color: color-mix(in oklab, var(--muted) 80%, transparent);
+  background: color-mix(in oklab, var(--surface) 86%, transparent);
+  opacity: .55;
+  pointer-events: none;
+}
+.mini-cal__day.is-other {
+  opacity: .4;
+}
+.mini-cal__day:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 38%, transparent);
+}
+.mini-cal__hint {
+  margin: 10px 0 0;
+  font-size: .8rem;
+  color: var(--muted);
+}
 .client-detail {
   padding-bottom: 12px;
 }

@@ -58,8 +58,27 @@
           <h3 id="modalTitle">Añadir cliente</h3>
           <form id="clientForm">
             <div class="form-row">
-              <label>Fecha</label>
-              <input type="text" id="clientDate" readonly />
+              <label>Días seleccionados</label>
+              <input type="hidden" id="clientDate" />
+              <input type="text" id="clientDateSummary" readonly />
+            </div>
+            <div class="mini-cal" id="miniCal" aria-label="Seleccionar días para el cliente">
+              <div class="mini-cal__header">
+                <button type="button" class="mini-cal__nav" id="miniCalPrev" aria-label="Mes anterior">‹</button>
+                <span class="mini-cal__title" id="miniCalTitle"></span>
+                <button type="button" class="mini-cal__nav" id="miniCalNext" aria-label="Mes siguiente">›</button>
+              </div>
+              <div class="mini-cal__weekdays">
+                <span>Lu</span>
+                <span>Ma</span>
+                <span>Mi</span>
+                <span>Ju</span>
+                <span>Vi</span>
+                <span>Sa</span>
+                <span>Do</span>
+              </div>
+              <div class="mini-cal__grid" id="miniCalGrid"></div>
+              <p class="mini-cal__hint">Puedes seleccionar varios días laborables. Los fines de semana están deshabilitados.</p>
             </div>
             <div class="form-row">
               <label>Nombre del cliente</label>
@@ -136,7 +155,7 @@
         <div class="help-grid" role="list">
           <article class="help-card" role="listitem">
             <h3>Registrar un paciente</h3>
-            <p>Elige el día correspondiente en el calendario mensual, revisa las plazas disponibles y completa nombre, teléfono y notas relevantes (tratamiento, recordatorios, alergias...).</p>
+            <p>Elige el día en el calendario mensual, revisa las plazas disponibles y usa el mini calendario del formulario para marcar todos los días laborables necesarios. Completa nombre, teléfono y notas (tratamiento, recordatorios, alergias...).</p>
           </article>
           <article class="help-card" role="listitem">
             <h3>Controlar la semana</h3>
@@ -180,6 +199,12 @@
         const viewMonthBtn = document.getElementById('viewMonth');
         const viewWeekBtn = document.getElementById('viewWeek');
         const searchBtn = document.getElementById('searchBtn');
+        const clientDateInput = document.getElementById('clientDate');
+        const clientDateSummaryInput = document.getElementById('clientDateSummary');
+        const miniCalTitleEl = document.getElementById('miniCalTitle');
+        const miniCalGridEl = document.getElementById('miniCalGrid');
+        const miniCalPrevBtn = document.getElementById('miniCalPrev');
+        const miniCalNextBtn = document.getElementById('miniCalNext');
         const detailModal = document.getElementById('clientDetailModal');
         const detailNameEl = document.getElementById('detailName');
         const detailPhoneEl = document.getElementById('detailPhone');
@@ -211,6 +236,90 @@
           const attrs = `data-client-name="${escapeHtml(name)}" data-client-phone="${escapeHtml(phone)}" data-client-notes="${escapeHtml(notes)}"`;
           const content = buildClientTags(client);
           return content ? `<li class="calendar__entry" ${attrs}>${content}</li>` : '';
+        }
+
+        function formatISOToLabel(iso) {
+          if (!iso) return '';
+          const d = new Date(iso + 'T00:00:00Z');
+          if (Number.isNaN(d.getTime())) return iso;
+          return `${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth() + 1).padStart(2, '0')}/${d.getUTCFullYear()}`;
+        }
+
+        function updateSelectedDaysSummary() {
+          if (!clientDateSummaryInput) return;
+          const values = Array.from(modalSelectedDays).sort();
+          if (values.length === 0) {
+            clientDateSummaryInput.value = 'Sin días seleccionados';
+          } else if (values.length <= 3) {
+            clientDateSummaryInput.value = values.map(formatISOToLabel).join(', ');
+          } else {
+            clientDateSummaryInput.value = `${values.length} días seleccionados`;
+          }
+          if (clientDateInput) clientDateInput.value = modalDayISO || '';
+        }
+
+        function shiftMiniCalMonth(delta) {
+          if (modalCalYear == null || modalCalMonth == null) return;
+          const ref = new Date(Date.UTC(modalCalYear, modalCalMonth + delta, 1));
+          modalCalYear = ref.getUTCFullYear();
+          modalCalMonth = ref.getUTCMonth();
+          renderMiniCalendar();
+        }
+
+        function toggleMiniCalDay(iso) {
+          if (!iso) return;
+          if (modalSelectedDays.has(iso)) modalSelectedDays.delete(iso);
+          else modalSelectedDays.add(iso);
+          updateSelectedDaysSummary();
+          renderMiniCalendar();
+        }
+
+        function renderMiniCalendar() {
+          if (!miniCalGridEl || modalCalYear == null || modalCalMonth == null) return;
+          const title = `${monthNames[modalCalMonth]} ${modalCalYear}`;
+          if (miniCalTitleEl) miniCalTitleEl.textContent = title;
+
+          const firstDay = new Date(Date.UTC(modalCalYear, modalCalMonth, 1));
+          const startWeekday = (firstDay.getUTCDay() + 6) % 7;
+          const daysInMonth = new Date(Date.UTC(modalCalYear, modalCalMonth + 1, 0)).getUTCDate();
+          const daysInPrevMonth = new Date(Date.UTC(modalCalYear, modalCalMonth, 0)).getUTCDate();
+          const totalCells = 42;
+          const cells = [];
+
+          for (let i = startWeekday - 1; i >= 0; i--) {
+            cells.push({ day: daysInPrevMonth - i, offset: -1, other: true });
+          }
+          for (let d = 1; d <= daysInMonth; d++) {
+            cells.push({ day: d, offset: 0, other: false });
+          }
+          while (cells.length < totalCells) {
+            const value = cells.length - (startWeekday + daysInMonth) + 1;
+            cells.push({ day: value, offset: 1, other: true });
+          }
+
+          const html = cells.map((cell) => {
+            const ref = new Date(Date.UTC(modalCalYear, modalCalMonth + cell.offset, cell.day));
+            const iso = `${ref.getUTCFullYear()}-${String(ref.getUTCMonth() + 1).padStart(2, '0')}-${String(ref.getUTCDate()).padStart(2, '0')}`;
+            const weekday = ref.getUTCDay();
+            const isWeekend = weekday === 0 || weekday === 6;
+            const isDisabled = isWeekend;
+            const isSelected = modalSelectedDays.has(iso);
+            const classes = ['mini-cal__day'];
+            if (cell.other) classes.push('is-other');
+            if (isDisabled) classes.push('is-disabled');
+            if (isSelected) classes.push('is-selected');
+            const disabledAttr = isDisabled ? 'disabled' : '';
+            const ariaPressed = `aria-pressed="${isSelected ? 'true' : 'false'}"`;
+            return `<button type="button" class="${classes.join(' ')}" data-iso="${iso}" ${ariaPressed} ${disabledAttr}>${cell.day}</button>`;
+          }).join('');
+
+          miniCalGridEl.innerHTML = html;
+          miniCalGridEl.querySelectorAll('.mini-cal__day:not(.is-disabled)').forEach((btn) => {
+            btn.addEventListener('click', () => {
+              const iso = btn.getAttribute('data-iso');
+              toggleMiniCalDay(iso);
+            });
+          });
         }
 
         function syncBodyScrollLock() {
@@ -297,8 +406,8 @@
           `;
           li.classList.remove('is-editing');
           // Reenganchar eventos
-          actions.querySelector('[data-edit]').addEventListener('click', () => enterEdit(li, document.getElementById('clientDate').value));
-          actions.querySelector('[data-del]').addEventListener('click', () => enterDeleteConfirm(li, document.getElementById('clientDate').value));
+          actions.querySelector('[data-edit]').addEventListener('click', () => enterEdit(li, modalDayISO));
+          actions.querySelector('[data-del]').addEventListener('click', () => enterDeleteConfirm(li, modalDayISO));
         }
 
         // UI helpers: confirmación de borrado inline
@@ -356,7 +465,7 @@
           }
         }
 
-        async function addClient({ dayISO, name, phone, notes }) {
+        async function addClient({ dayISO, name, phone, notes }, { skipRefresh = false, refreshDay = dayISO } = {}) {
           const errEl = document.getElementById('clientError');
           errEl.hidden = true; errEl.textContent = '';
           try {
@@ -371,8 +480,10 @@
               errEl.hidden = false;
               return false;
             }
-            await render();
-            await loadClientsInModal(dayISO);
+            if (!skipRefresh) {
+              await render();
+              await loadClientsInModal(refreshDay);
+            }
             return true;
           } catch (e) {
             console.error(e);
@@ -383,7 +494,40 @@
           }
         }
 
+        async function addClients(days, { name, phone, notes }) {
+          const errEl = document.getElementById('clientError');
+          errEl.hidden = true; errEl.textContent = '';
+          const ordered = Array.from(new Set(days)).sort();
+          if (ordered.length === 0) {
+            errEl.textContent = 'Selecciona al menos un día laborable.';
+            errEl.hidden = false;
+            return false;
+          }
+
+          let hadAnySuccess = false;
+          for (const dayISO of ordered) {
+            const ok = await addClient({ dayISO, name, phone, notes }, { skipRefresh: true });
+            if (!ok) {
+              if (hadAnySuccess) {
+                await render();
+                if (modalDayISO) await loadClientsInModal(modalDayISO);
+              }
+              return false;
+            }
+            hadAnySuccess = true;
+          }
+
+          if (hadAnySuccess) {
+            await render();
+            if (modalDayISO) await loadClientsInModal(modalDayISO);
+          }
+          return true;
+        }
+
         let modalDayISO = null;
+        let modalSelectedDays = new Set();
+        let modalCalYear = null;
+        let modalCalMonth = null;
         function startOfWeek(d) {
           // Retorna lunes de la semana para una fecha dada (UTC)
           const dt = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
@@ -398,7 +542,19 @@
         state.weekAnchor = startOfWeek(new Date());
         function openModal(dayISO) {
           modalDayISO = dayISO;
-          document.getElementById('clientDate').value = dayISO;
+          modalSelectedDays = new Set(dayISO ? [dayISO] : []);
+          const baseDate = new Date(dayISO + 'T00:00:00Z');
+          if (!Number.isNaN(baseDate.getTime())) {
+            modalCalYear = baseDate.getUTCFullYear();
+            modalCalMonth = baseDate.getUTCMonth();
+          } else {
+            const fallback = new Date();
+            modalCalYear = fallback.getUTCFullYear();
+            modalCalMonth = fallback.getUTCMonth();
+          }
+          if (clientDateInput) clientDateInput.value = dayISO;
+          updateSelectedDaysSummary();
+          renderMiniCalendar();
           document.getElementById('clientName').value = '';
           document.getElementById('clientPhone').value = '';
           document.getElementById('clientNotes').value = '';
@@ -739,6 +895,8 @@
         // Navegación según vista
         prevBtn.addEventListener('click', () => state.view === 'month' ? addMonth(-1) : addWeek(-1));
         nextBtn.addEventListener('click', () => state.view === 'month' ? addMonth(1) : addWeek(1));
+        if (miniCalPrevBtn) miniCalPrevBtn.addEventListener('click', () => shiftMiniCalMonth(-1));
+        if (miniCalNextBtn) miniCalNextBtn.addEventListener('click', () => shiftMiniCalMonth(1));
 
         // Toggle de vista
         function setView(view, date = null) {
@@ -794,8 +952,8 @@
           const phone = phoneInput.value.trim();
           const notes = notesInput.value.trim();
 
-          const ok = await addClient({
-            dayISO: modalDayISO,
+          const selectedDays = Array.from(modalSelectedDays);
+          const ok = await addClients(selectedDays, {
             name,
             phone: phone.length ? phone : null,
             notes: notes.length ? notes : null
@@ -806,6 +964,16 @@
             phoneInput.value = '';
             notesInput.value = '';
             nameInput.focus();
+            modalSelectedDays = new Set(modalDayISO ? [modalDayISO] : []);
+            if (modalDayISO) {
+              const base = new Date(modalDayISO + 'T00:00:00Z');
+              if (!Number.isNaN(base.getTime())) {
+                modalCalYear = base.getUTCFullYear();
+                modalCalMonth = base.getUTCMonth();
+              }
+            }
+            updateSelectedDaysSummary();
+            renderMiniCalendar();
           }
         });
 
