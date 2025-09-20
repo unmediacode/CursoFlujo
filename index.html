@@ -60,7 +60,7 @@
             <div class="form-row">
               <label>Días seleccionados</label>
               <input type="hidden" id="clientDate" />
-              <input type="text" id="clientDateSummary" readonly />
+              <input type="text" id="clientDateSummary" readonly value="Sin días seleccionados" />
             </div>
             <div class="mini-cal" id="miniCal" aria-label="Seleccionar días para el cliente">
               <div class="mini-cal__header">
@@ -110,23 +110,26 @@
         <div class="modal__overlay" data-close-detail></div>
         <div class="modal__content client-detail" role="document">
           <h3 id="detailTitle">Detalle del cliente</h3>
-          <dl class="client-detail__list">
-            <div>
-              <dt>Nombre</dt>
-              <dd id="detailName">—</dd>
+          <form id="detailForm">
+            <div class="form-row">
+              <label for="detailNameInput">Nombre</label>
+              <input type="text" id="detailNameInput" required />
             </div>
-            <div>
-              <dt>Teléfono</dt>
-              <dd id="detailPhone">—</dd>
+            <div class="form-row">
+              <label for="detailPhoneInput">Teléfono</label>
+              <input type="tel" id="detailPhoneInput" />
             </div>
-            <div>
-              <dt>Notas</dt>
-              <dd id="detailNotes">—</dd>
+            <div class="form-row">
+              <label for="detailNotesInput">Notas</label>
+              <textarea id="detailNotesInput" rows="2"></textarea>
             </div>
-          </dl>
-          <div class="form-actions client-detail__actions">
-            <button type="button" class="btn btn--secondary" data-close-detail>Cerrar</button>
-          </div>
+            <p class="form-error" id="detailError" hidden></p>
+            <div class="form-actions client-detail__actions">
+              <button type="submit" class="btn">Guardar cambios</button>
+              <button type="button" class="btn btn--secondary" data-reset-detail>Restablecer</button>
+              <button type="button" class="btn btn--secondary" data-close-detail>Cerrar</button>
+            </div>
+          </form>
         </div>
       </div>
 
@@ -206,9 +209,12 @@
         const miniCalPrevBtn = document.getElementById('miniCalPrev');
         const miniCalNextBtn = document.getElementById('miniCalNext');
         const detailModal = document.getElementById('clientDetailModal');
-        const detailNameEl = document.getElementById('detailName');
-        const detailPhoneEl = document.getElementById('detailPhone');
-        const detailNotesEl = document.getElementById('detailNotes');
+        const detailForm = document.getElementById('detailForm');
+        const detailNameInput = document.getElementById('detailNameInput');
+        const detailPhoneInput = document.getElementById('detailPhoneInput');
+        const detailNotesInput = document.getElementById('detailNotesInput');
+        const detailErrorEl = document.getElementById('detailError');
+        const detailResetBtn = document.querySelector('[data-reset-detail]');
 
         const API_BASE = 'http://localhost:3000';
 
@@ -228,12 +234,18 @@
           return `<span class="calendar__tag calendar__tag--name" data-client-detail role="button" tabindex="0" aria-label="Ver detalle de ${escapeHtml(name)}">${escapeHtml(name)}</span>`;
         }
 
-        function buildCalendarEntry(client) {
+        function buildCalendarEntry(client, dayISO) {
           if (!client) return '';
           const name = typeof client.name === 'string' ? client.name.trim() : '';
           const phone = typeof client.phone === 'string' ? client.phone.trim() : '';
           const notes = typeof client.notes === 'string' ? client.notes.trim() : '';
-          const attrs = `data-client-name="${escapeHtml(name)}" data-client-phone="${escapeHtml(phone)}" data-client-notes="${escapeHtml(notes)}"`;
+          const attrParts = [];
+          if (client.id != null) attrParts.push(`data-client-id="${escapeHtml(String(client.id))}"`);
+          if (dayISO) attrParts.push(`data-client-day="${escapeHtml(dayISO)}"`);
+          attrParts.push(`data-client-name="${escapeHtml(name)}"`);
+          attrParts.push(`data-client-phone="${escapeHtml(phone)}"`);
+          attrParts.push(`data-client-notes="${escapeHtml(notes)}"`);
+          const attrs = attrParts.join(' ');
           const content = buildClientTags(client);
           return content ? `<li class="calendar__entry" ${attrs}>${content}</li>` : '';
         }
@@ -322,22 +334,58 @@
           });
         }
 
+        function setDetailFormValues(values) {
+          if (detailNameInput) detailNameInput.value = values.name || '';
+          if (detailPhoneInput) detailPhoneInput.value = values.phone || '';
+          if (detailNotesInput) detailNotesInput.value = values.notes || '';
+        }
+
+        function clearDetailMessage() {
+          if (!detailErrorEl) return;
+          detailErrorEl.hidden = true;
+          detailErrorEl.textContent = '';
+          detailErrorEl.classList.remove('is-success');
+        }
+
+        function showDetailMessage(text, success = false) {
+          if (!detailErrorEl) return;
+          detailErrorEl.textContent = text;
+          detailErrorEl.hidden = false;
+          detailErrorEl.classList.toggle('is-success', success);
+          if (!success) detailErrorEl.classList.remove('is-success');
+        }
+
         function syncBodyScrollLock() {
           const anyOpen = Array.from(document.querySelectorAll('.modal')).some(modal => modal.getAttribute('aria-hidden') === 'false');
           document.body.style.overflow = anyOpen ? 'hidden' : '';
         }
 
-        function openClientDetail({ name, phone, notes }) {
-          detailNameEl.textContent = name || '—';
-          detailPhoneEl.textContent = phone || '—';
-          detailNotesEl.textContent = notes || '—';
+        function openClientDetail({ id, day, name, phone, notes }) {
+          let normalizedId = null;
+          if (id !== undefined && id !== null && String(id).trim() !== '') {
+            const parsed = Number(id);
+            normalizedId = Number.isFinite(parsed) ? parsed : null;
+          }
+          detailContext = {
+            id: normalizedId,
+            day: day || modalDayISO || null,
+            name: (name || '').trim(),
+            phone: (phone || '').trim(),
+            notes: (notes || '').trim()
+          };
+          setDetailFormValues(detailContext);
+          clearDetailMessage();
           detailModal.setAttribute('aria-hidden', 'false');
           syncBodyScrollLock();
+          if (detailNameInput) detailNameInput.focus();
         }
 
         function closeClientDetail() {
           detailModal.setAttribute('aria-hidden', 'true');
           syncBodyScrollLock();
+          detailContext = { id: null, day: null, name: '', phone: '', notes: '' };
+          if (detailForm) detailForm.reset();
+          clearDetailMessage();
         }
 
         function attachClientDetailHandlers(root = document) {
@@ -346,20 +394,26 @@
             if (el.dataset.clientDetailBound === '1') return;
             el.dataset.clientDetailBound = '1';
             const getDetailData = () => {
-              const container = el.closest('.calendar__entry') || el.closest('.client-info') || el.closest('[data-client-name]');
-              const valueFrom = (attr, fallbackSelector) => {
+              const container = el.closest('[data-client-id]') || el.closest('.calendar__entry') || el.closest('.client-info') || el.closest('[data-client-name]');
+              const attrFrom = (attr) => {
                 if (container && container.hasAttribute(attr)) {
                   const v = container.getAttribute(attr);
                   if (v && v.trim()) return v.trim();
                 }
-                if (!container || !fallbackSelector) return '';
-                const target = container.matches(fallbackSelector) ? container : container.querySelector(fallbackSelector);
-                return target ? target.textContent.trim() : '';
+                const fallback = el.closest(`[${attr}]`);
+                if (fallback && fallback.hasAttribute(attr)) {
+                  const v = fallback.getAttribute(attr);
+                  if (v && v.trim()) return v.trim();
+                }
+                return '';
               };
+              const nameFromText = container ? container.textContent.trim() : '';
               return {
-                name: valueFrom('data-client-name', '[data-client-detail]'),
-                phone: valueFrom('data-client-phone', '.calendar__tag--phone'),
-                notes: valueFrom('data-client-notes', '.calendar__tag--notes')
+                id: attrFrom('data-client-id'),
+                day: attrFrom('data-client-day') || attrFrom('data-iso') || '',
+                name: attrFrom('data-client-name') || nameFromText,
+                phone: attrFrom('data-client-phone'),
+                notes: attrFrom('data-client-notes')
               };
             };
 
@@ -528,6 +582,7 @@
         let modalSelectedDays = new Set();
         let modalCalYear = null;
         let modalCalMonth = null;
+        let detailContext = { id: null, day: null, name: '', phone: '', notes: '' };
         function startOfWeek(d) {
           // Retorna lunes de la semana para una fecha dada (UTC)
           const dt = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
@@ -611,8 +666,9 @@
               const nameAttr = escapeHtml(r.name || '');
               const phoneAttr = escapeHtml(r.phone || '');
               const notesAttr = escapeHtml(r.notes || '');
+              const idAttr = escapeHtml(String(r.id || ''));
               return `
-                <li data-iso="${iso}" data-client-name="${nameAttr}" data-client-phone="${phoneAttr}" data-client-notes="${notesAttr}">
+                <li data-iso="${iso}" data-client-id="${idAttr}" data-client-day="${iso}" data-client-name="${nameAttr}" data-client-phone="${phoneAttr}" data-client-notes="${notesAttr}">
                   <div class="client-info">${tags}</div>
                   <small class="muted"> — ${label}</small>
                   <button type="button" class="link" data-open-day>Ver día</button>
@@ -663,8 +719,9 @@
               const nameAttr = escapeHtml(r.name || '');
               const phoneAttr = escapeHtml(r.phone || '');
               const notesAttr = escapeHtml(r.notes || '');
+              const idAttr = escapeHtml(String(r.id || ''));
               return `
-              <li data-id="${r.id}" data-client-name="${nameAttr}" data-client-phone="${phoneAttr}" data-client-notes="${notesAttr}">
+              <li data-id="${r.id}" data-client-id="${idAttr}" data-client-day="${dayISO}" data-client-name="${nameAttr}" data-client-phone="${phoneAttr}" data-client-notes="${notesAttr}">
                 <div class="client-info">
                   <span class="client-name" data-text data-client-detail role="button" tabindex="0" aria-label="Ver detalle de ${nameAttr}">${escapeHtml(r.name)}</span>
                 </div>
@@ -704,23 +761,38 @@
           }
         }
 
-        async function updateClientName(id, name, dayISO) {
+        async function updateClientFields(id, payload) {
+          if (id == null) return { ok: false, error: 'Cliente inválido' };
+          const body = {};
+          if (Object.prototype.hasOwnProperty.call(payload, 'name')) body.name = payload.name;
+          if (Object.prototype.hasOwnProperty.call(payload, 'phone')) body.phone = payload.phone;
+          if (Object.prototype.hasOwnProperty.call(payload, 'notes')) body.notes = payload.notes;
+          if (Object.keys(body).length === 0) return { ok: true };
           try {
             const res = await fetch(`${API_BASE}/api/clients/${id}`, {
               method: 'PUT',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ name })
+              body: JSON.stringify(body)
             });
             const data = await res.json();
             if (!res.ok || !data.ok) {
-              alert(data.error || 'No se pudo actualizar');
-              return;
+              return { ok: false, error: data.error || 'No se pudo actualizar' };
             }
-            await render();
-            await loadClientsInModal(dayISO);
+            return { ok: true };
           } catch (e) {
-            alert('Error de red');
+            console.error(e);
+            return { ok: false, error: 'Error de red' };
           }
+        }
+
+        async function updateClientName(id, name, dayISO) {
+          const result = await updateClientFields(id, { name });
+          if (!result.ok) {
+            alert(result.error || 'No se pudo actualizar');
+            return;
+          }
+          await render();
+          await loadClientsInModal(dayISO);
         }
 
         async function render() {
@@ -771,7 +843,7 @@
             const dayInfo = inThisMonth ? summary[dayISO] : undefined;
             const count = dayInfo ? Number(dayInfo.count) : 0;
             const entries = dayInfo && Array.isArray(dayInfo.clients)
-              ? dayInfo.clients.map(buildCalendarEntry).filter(Boolean).join('')
+              ? dayInfo.clients.map((client) => buildCalendarEntry(client, dayISO)).filter(Boolean).join('')
               : '';
             return `
               <button class="calendar__cell${inOtherMonth ? ' is-other' : ''}${isToday ? ' is-today' : ''}${isWeekend ? ' is-weekend' : ''}"
@@ -847,7 +919,7 @@
             const isWeekend = idx >= 5; // sab=5, dom=6 en esta lista
             const rows = dataByIso[iso] || [];
             const count = rows.length;
-            const namesList = rows.map(buildCalendarEntry).filter(Boolean).join('');
+            const namesList = rows.map((r) => buildCalendarEntry(r, iso)).filter(Boolean).join('');
             return `
               <button class="calendar__cell${isToday ? ' is-today' : ''}${isWeekend ? ' is-weekend' : ''}"
                       role="gridcell" aria-selected="${isToday ? 'true' : 'false'}"
@@ -930,6 +1002,58 @@
         document.querySelectorAll('[data-close-detail]').forEach(el => {
           el.addEventListener('click', closeClientDetail);
         });
+        if (detailResetBtn) {
+          detailResetBtn.addEventListener('click', () => {
+            setDetailFormValues(detailContext);
+            clearDetailMessage();
+            if (detailNameInput) detailNameInput.focus();
+          });
+        }
+        if (detailForm) {
+          detailForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!detailContext || detailContext.id == null) {
+              showDetailMessage('No se pudo identificar al cliente.');
+              return;
+            }
+            const name = detailNameInput ? detailNameInput.value.trim() : '';
+            if (!name) {
+              showDetailMessage('El nombre es obligatorio.');
+              if (detailNameInput) detailNameInput.focus();
+              return;
+            }
+            const phone = detailPhoneInput ? detailPhoneInput.value.trim() : '';
+            const notes = detailNotesInput ? detailNotesInput.value.trim() : '';
+
+            const payload = {};
+            if (name !== detailContext.name) payload.name = name;
+            if (phone !== detailContext.phone) payload.phone = phone.length ? phone : null;
+            if (notes !== detailContext.notes) payload.notes = notes.length ? notes : null;
+
+            if (Object.keys(payload).length === 0) {
+              showDetailMessage('No hay cambios que guardar.', true);
+              return;
+            }
+
+            const result = await updateClientFields(detailContext.id, payload);
+            if (!result.ok) {
+              showDetailMessage(result.error || 'No se pudo actualizar');
+              return;
+            }
+
+            detailContext = {
+              id: detailContext.id,
+              day: detailContext.day,
+              name,
+              phone,
+              notes
+            };
+            setDetailFormValues(detailContext);
+            showDetailMessage('Cambios guardados correctamente.', true);
+            await render();
+            if (detailContext.day) await loadClientsInModal(detailContext.day);
+          });
+        }
         // Búsqueda: abrir/cerrar y submit
         searchBtn.addEventListener('click', openSearch);
         document.querySelectorAll('[data-close-search]').forEach(el => el.addEventListener('click', closeSearch));

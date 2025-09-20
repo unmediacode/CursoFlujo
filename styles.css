@@ -208,6 +208,7 @@ small.muted { color: var(--muted); }
 }
 .form-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 12px; }
 .form-error { color: #ef4444; margin-top: 8px; }
+.form-error.is-success { color: #22c55e; }
 .mini-cal {
   margin: 8px 0 18px;
   padding: 12px;
