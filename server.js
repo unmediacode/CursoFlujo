@@ -64,6 +64,18 @@ app.post('/api/init', async (req, res) => {
   }
 });
 
+// Inicializa tabla para clientes por día
+app.post('/api/init-clients', async (req, res) => {
+  try {
+    await db.execute("create table if not exists clients (id integer primary key, day text not null, name text not null, created_at text default (datetime('now')))");
+    await db.execute("create index if not exists idx_clients_day on clients(day)");
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 // Inserta una nota de ejemplo
 app.post('/api/notes', async (req, res) => {
   const { title } = req.body ?? {};
@@ -84,6 +96,82 @@ app.post('/api/notes', async (req, res) => {
 app.get('/api/notes', async (req, res) => {
   try {
     const rs = await db.execute('select id, title, created_at from notes order by id desc');
+    res.json({ ok: true, rows: rs.rows });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// Crear cliente para una fecha (solo Lun-Vie, máx 10)
+app.post('/api/clients', async (req, res) => {
+  const { day, name } = req.body ?? {};
+  if (!day || !name) return res.status(400).json({ ok: false, error: 'day y name requeridos' });
+  try {
+    // Validar fecha YYYY-MM-DD
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) {
+      return res.status(400).json({ ok: false, error: 'Formato de day inválido. Usa YYYY-MM-DD' });
+    }
+    // Determinar día de la semana en UTC: 0=Dom ... 6=Sab
+    const d = new Date(day + 'T00:00:00Z');
+    if (Number.isNaN(d.getTime())) {
+      return res.status(400).json({ ok: false, error: 'Fecha inválida' });
+    }
+    const weekday = d.getUTCDay();
+    if (weekday === 0 || weekday === 6) {
+      return res.status(400).json({ ok: false, error: 'Solo se permiten clientes de lunes a viernes' });
+    }
+    // Contar existentes
+    const cnt = await db.execute({ sql: 'select count(*) as c from clients where day = ?', args: [day] });
+    const c = Number(cnt.rows?.[0]?.c ?? 0);
+    if (c >= 10) {
+      return res.status(400).json({ ok: false, error: 'Máximo 10 clientes por día' });
+    }
+    // Insertar
+    const rs = await db.execute({ sql: 'insert into clients (day, name) values (?, ?) returning id, day, name, created_at', args: [day, name] });
+    res.json({ ok: true, row: rs.rows?.[0] ?? null, remaining: 9 - c });
+  } catch (err) {
+    console.error(err);
+    res.status(400).json({ ok: false, error: err.message });
+  }
+});
+
+// Listar clientes de un día concreto
+app.get('/api/clients', async (req, res) => {
+  const { day } = req.query;
+  if (!day) return res.status(400).json({ ok: false, error: 'query param day requerido (YYYY-MM-DD)' });
+  try {
+    const rs = await db.execute({
+      sql: 'select id, name, day, created_at from clients where day = ? order by id asc',
+      args: [day]
+    });
+    res.json({ ok: true, rows: rs.rows });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// Resumen por mes: conteo de clientes por día (YYYY, MM 1-12)
+app.get('/api/clients/summary', async (req, res) => {
+  const year = parseInt(req.query.year, 10);
+  const month = parseInt(req.query.month, 10); // 1..12
+  if (!year || !month) return res.status(400).json({ ok: false, error: 'year y month requeridos' });
+  const yyyy = String(year).padStart(4, '0');
+  const mm = String(month).padStart(2, '0');
+  const start = `${yyyy}-${mm}-01`;
+  // último día del mes: usar truco sumando un mes y restando un día
+  const nextMonth = month === 12 ? `${year + 1}-01-01` : `${yyyy}-${String(month + 1).padStart(2, '0')}-01`;
+  try {
+    const rs = await db.execute({
+      sql: `
+        select day, count(*) as count
+        from clients
+        where day >= ? and day < ?
+        group by day
+      `,
+      args: [start, nextMonth]
+    });
     res.json({ ok: true, rows: rs.rows });
   } catch (err) {
     console.error(err);

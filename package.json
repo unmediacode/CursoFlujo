@@ -7,7 +7,14 @@
     "start": "node server.js",
     "dev": "nodemon server.js"
   },
-  "keywords": ["turso", "libsql", "express", "calendar", "html", "css"],
+  "keywords": [
+    "turso",
+    "libsql",
+    "express",
+    "calendar",
+    "html",
+    "css"
+  ],
   "author": "",
   "license": "MIT",
   "dependencies": {

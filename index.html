@@ -66,7 +66,48 @@
         const prevBtn = document.getElementById('prevMonth');
         const nextBtn = document.getElementById('nextMonth');
 
-        function render() {
+        const API_BASE = 'http://localhost:3000';
+
+        async function fetchSummary(year, month /* 0-11 */) {
+          const y = year;
+          const m = month + 1; // API espera 1..12
+          try {
+            const res = await fetch(`${API_BASE}/api/clients/summary?year=${y}&month=${m}`);
+            const data = await res.json();
+            if (!data.ok) return {};
+            // Mapa YYYY-MM-DD -> count
+            const map = {};
+            for (const r of data.rows || []) map[r.day] = Number(r.count);
+            return map;
+          } catch (e) {
+            console.error('summary error', e);
+            return {};
+          }
+        }
+
+        async function addClient(dayISO) {
+          try {
+            const name = prompt('Nombre del cliente para ' + dayISO + ':');
+            if (!name) return;
+            const res = await fetch(`${API_BASE}/api/clients`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ day: dayISO, name })
+            });
+            const data = await res.json();
+            if (!res.ok || !data.ok) {
+              alert(data.error || 'Error al añadir cliente');
+              return;
+            }
+            // Re-render para actualizar conteos
+            await render();
+          } catch (e) {
+            console.error(e);
+            alert('Error de red');
+          }
+        }
+
+        async function render() {
           const { year, month } = state;
           titleEl.textContent = monthNames[month] + ' ' + year;
 
@@ -98,6 +139,7 @@
           const today = new Date();
           const isSameDay = (y, m, d) => today.getFullYear() === y && today.getMonth() === m && today.getDate() === d;
 
+          const summary = await fetchSummary(year, month);
           gridEl.innerHTML = cells.map((c, idx) => {
             const inOtherMonth = c.other;
             const inThisMonth = !inOtherMonth;
@@ -105,14 +147,29 @@
             const isToday = inThisMonth && isSameDay(state.year, state.month, dayNum);
             const col = idx % 7; // 0=Lu, 5=Sa, 6=Do
             const isWeekend = col === 5 || col === 6;
+            // Fecha ISO del día para conteo
+            const dayISO = `${year}-${String(month + 1).padStart(2,'0')}-${String(dayNum).padStart(2,'0')}`;
+            const count = inThisMonth ? (summary[dayISO] || 0) : 0;
             return `
               <button class="calendar__cell${inOtherMonth ? ' is-other' : ''}${isToday ? ' is-today' : ''}${isWeekend ? ' is-weekend' : ''}"
                       role="gridcell" aria-selected="${isToday ? 'true' : 'false'}"
-                      tabindex="${idx === 0 ? '0' : '-1'}" data-day="${dayNum}">
+                      tabindex="${idx === 0 ? '0' : '-1'}" data-day="${dayNum}" data-iso="${dayISO}" data-weekend="${isWeekend}" data-other="${inOtherMonth}">
                 <span class="calendar__date">${dayNum}</span>
+                ${inThisMonth && count > 0 ? `<span class="calendar__badge" title="${count} cliente(s)">${count}</span>` : ''}
               </button>
             `;
           }).join('');
+
+          // Click para añadir cliente (solo días del mes actual y laborales)
+          gridEl.querySelectorAll('.calendar__cell').forEach((btn) => {
+            btn.addEventListener('click', async () => {
+              const isOther = btn.getAttribute('data-other') === 'true';
+              const isWeekendAttr = btn.getAttribute('data-weekend') === 'true';
+              if (isOther || isWeekendAttr) return; // no permitir otros meses ni fines de semana
+              const iso = btn.getAttribute('data-iso');
+              await addClient(iso);
+            });
+          });
         }
 
         function addMonth(delta) {
