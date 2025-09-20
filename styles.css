@@ -163,6 +163,78 @@ a:hover { text-decoration: underline; }
   outline-offset: 3px;
   border-radius: 6px;
 }
+/* Calendario */
+.calendar {
+  margin: 48px auto;
+  padding: 16px;
+  background: color-mix(in oklab, var(--surface) 92%, transparent);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+}
+.calendar__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.calendar__title {
+  margin: 0;
+  font-size: 1.25rem;
+}
+.cal-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid color-mix(in oklab, var(--primary) 60%, var(--border));
+  background: color-mix(in oklab, var(--primary) 10%, transparent);
+  color: var(--primary);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background .15s ease, transform .06s ease;
+}
+.cal-btn:hover { background: color-mix(in oklab, var(--primary) 18%, transparent); }
+.cal-btn:active { transform: scale(.96); }
+
+.calendar__weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  padding: 6px 2px 8px;
+  color: var(--muted);
+  font-size: .9rem;
+}
+.calendar__weekdays span { text-align: center; }
+
+.calendar__grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+.calendar__cell {
+  position: relative;
+  display: grid;
+  place-items: start;
+  min-height: 82px;
+  padding: 8px;
+  text-align: left;
+  border: 1px solid var(--border);
+  background: color-mix(in oklab, var(--surface) 94%, transparent);
+  border-radius: 12px;
+  color: var(--text);
+}
+.calendar__cell:hover { outline: 2px solid color-mix(in oklab, var(--primary) 40%, transparent); }
+.calendar__cell.is-other { opacity: .55; }
+.calendar__cell.is-today {
+  border-color: color-mix(in oklab, var(--accent) 70%, var(--border));
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--accent) 26%, transparent) inset;
+}
+.calendar__date {
+  font-weight: 700;
+  font-size: .95rem;
+}
 
 /* Responsivo fino */
 @media (max-width: 520px) {

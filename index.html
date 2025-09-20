@@ -19,41 +19,26 @@
     </header>
 
     <main id="inicio">
-      <section class="hero container">
-        <div class="hero__content">
-          <h2>Bienvenido/a a tu página sencilla</h2>
-          <p>
-            Esta es una plantilla mínima en HTML y CSS lista para personalizar.
-            Es responsive, accesible y usa estilos modernos.
-          </p>
-          <a class="btn" href="#caracteristicas">Ver más</a>
+      <section class="container">
+        <div class="calendar" aria-label="Calendario mensual">
+          <div class="calendar__header">
+            <button class="cal-btn" id="prevMonth" aria-label="Mes anterior">‹</button>
+            <h2 class="calendar__title" id="calTitle" aria-live="polite"></h2>
+            <button class="cal-btn" id="nextMonth" aria-label="Mes siguiente">›</button>
+          </div>
+
+          <div class="calendar__weekdays" aria-hidden="true">
+            <span>Lu</span>
+            <span>Ma</span>
+            <span>Mi</span>
+            <span>Ju</span>
+            <span>Vi</span>
+            <span>Sa</span>
+            <span>Do</span>
+          </div>
+
+          <div class="calendar__grid" id="calGrid" role="grid" aria-readonly="true" aria-label="Días del mes"></div>
         </div>
-      </section>
-
-      <section id="caracteristicas" class="features container">
-        <h3>Características</h3>
-        <ul class="features__list">
-          <li>
-            <span class="feat-title">Estructura limpia</span>
-            <span class="feat-desc">HTML semántico y organizado.</span>
-          </li>
-          <li>
-            <span class="feat-title">Diseño responsive</span>
-            <span class="feat-desc">Se adapta a móviles, tablets y escritorio.</span>
-          </li>
-          <li>
-            <span class="feat-title">Modo claro/oscuro</span>
-            <span class="feat-desc">Respeta la preferencia del sistema.</span>
-          </li>
-        </ul>
-      </section>
-
-      <section id="contacto" class="contact container">
-        <h3>Contacto</h3>
-        <p>
-          ¿Tienes dudas o ideas? Puedes editar este texto o añadir un formulario.
-        </p>
-        <a class="btn btn--secondary" href="#inicio">Volver arriba</a>
       </section>
     </main>
 
@@ -64,7 +49,84 @@
     </footer>
 
     <script>
-      // Inserta el año actual automáticamente
+      // Lógica del calendario mensual con paginación (prev/next)
+      (function() {
+        const monthNames = [
+          'Enero','Febrero','Marzo','Abril','Mayo','Junio',
+          'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'
+        ];
+
+        const state = (function initState() {
+          const now = new Date();
+          return { year: now.getFullYear(), month: now.getMonth() };
+        })();
+
+        const titleEl = document.getElementById('calTitle');
+        const gridEl = document.getElementById('calGrid');
+        const prevBtn = document.getElementById('prevMonth');
+        const nextBtn = document.getElementById('nextMonth');
+
+        function render() {
+          const { year, month } = state;
+          titleEl.textContent = monthNames[month] + ' ' + year;
+
+          // Calcula desde lunes (0) a domingo (6)
+          const firstDay = new Date(year, month, 1);
+          const startWeekday = (firstDay.getDay() + 6) % 7; // Lunes=0 ... Domingo=6
+          const daysInMonth = new Date(year, month + 1, 0).getDate();
+          const daysInPrevMonth = new Date(year, month, 0).getDate();
+
+          const totalCells = 42; // 6 filas x 7 columnas
+          const cells = [];
+
+          // Días del mes anterior que "rellenan" al inicio
+          for (let i = startWeekday - 1; i >= 0; i--) {
+            const dayNum = daysInPrevMonth - i;
+            cells.push({ day: dayNum, other: true });
+          }
+
+          // Días del mes actual
+          for (let d = 1; d <= daysInMonth; d++) {
+            cells.push({ day: d, other: false });
+          }
+
+          // Días del mes siguiente para completar las 42 celdas
+          while (cells.length < totalCells) {
+            cells.push({ day: cells.length - (startWeekday + daysInMonth) + 1, other: true });
+          }
+
+          const today = new Date();
+          const isSameDay = (y, m, d) => today.getFullYear() === y && today.getMonth() === m && today.getDate() === d;
+
+          gridEl.innerHTML = cells.map((c, idx) => {
+            const inOtherMonth = c.other;
+            const inThisMonth = !inOtherMonth;
+            const dayNum = c.day;
+            const isToday = inThisMonth && isSameDay(state.year, state.month, dayNum);
+            return `
+              <button class="calendar__cell${inOtherMonth ? ' is-other' : ''}${isToday ? ' is-today' : ''}"
+                      role="gridcell" aria-selected="${isToday ? 'true' : 'false'}"
+                      tabindex="${idx === 0 ? '0' : '-1'}" data-day="${dayNum}">
+                <span class="calendar__date">${dayNum}</span>
+              </button>
+            `;
+          }).join('');
+        }
+
+        function addMonth(delta) {
+          const d = new Date(state.year, state.month + delta, 1);
+          state.year = d.getFullYear();
+          state.month = d.getMonth();
+          render();
+        }
+
+        prevBtn.addEventListener('click', () => addMonth(-1));
+        nextBtn.addEventListener('click', () => addMonth(1));
+
+        render();
+      })();
+
+      // Inserta el año actual automáticamente en el footer
       document.getElementById('year').textContent = new Date().getFullYear();
     </script>
   </body>
