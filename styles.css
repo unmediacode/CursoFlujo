@@ -1,0 +1,171 @@
+/* Reset básico y variables */
+:root {
+  --bg: #0f172a;            /* slate-900 */
+  --surface: #111827;       /* gray-900 */
+  --text: #e5e7eb;          /* gray-200 */
+  --muted: #94a3b8;         /* slate-400 */
+  --primary: #22d3ee;       /* cyan-400 */
+  --primary-ink: #0e7490;   /* cyan-700 */
+  --accent: #a78bfa;        /* violet-400 */
+  --border: #1f2937;        /* gray-800 */
+  --shadow: 0 10px 25px rgba(0,0,0,.25);
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #f8fafc;          /* slate-50 */
+    --surface: #ffffff;     /* white */
+    --text: #0f172a;        /* slate-900 */
+    --muted: #475569;       /* slate-600 */
+    --primary: #06b6d4;     /* cyan-500 */
+    --primary-ink: #083344; /* cyan-950 */
+    --accent: #7c3aed;      /* violet-600 */
+    --border: #e2e8f0;      /* slate-200 */
+  }
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+  background: radial-gradient(1200px 800px at 10% 10%, rgba(34,211,238,.12), transparent 60%),
+              radial-gradient(1000px 700px at 90% 20%, rgba(167,139,250,.12), transparent 60%),
+              var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+}
+
+/* Utilidades */
+.container {
+  width: min(1100px, 92%);
+  margin: 0 auto;
+}
+
+a { color: var(--primary); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* Header */
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: color-mix(in oklab, var(--surface) 92%, transparent);
+  backdrop-filter: saturate(150%) blur(8px);
+  border-bottom: 1px solid var(--border);
+}
+.site-header .container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 0;
+}
+.logo {
+  margin: 0;
+  font-size: 1.25rem;
+  letter-spacing: .5px;
+}
+.nav a {
+  display: inline-block;
+  margin-left: 14px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  transition: background .2s ease;
+}
+.nav a:hover {
+  background: color-mix(in oklab, var(--primary) 18%, transparent);
+}
+
+/* Hero */
+.hero {
+  min-height: 70dvh;
+  display: grid;
+  place-items: center;
+  padding: 64px 0 32px;
+}
+.hero__content {
+  text-align: center;
+  max-width: 780px;
+  padding: 28px;
+  background: linear-gradient(180deg, color-mix(in oklab, var(--surface) 92%, transparent), color-mix(in oklab, var(--surface) 96%, transparent));
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  box-shadow: var(--shadow);
+}
+.hero h2 {
+  margin: 0 0 10px;
+  font-size: clamp(1.6rem, 2.8vw + .8rem, 2.4rem);
+}
+.hero p {
+  margin: 0 0 22px;
+  color: var(--muted);
+}
+
+/* Botones */
+.btn {
+  display: inline-block;
+  padding: 12px 18px;
+  border-radius: 12px;
+  background: var(--primary);
+  color: var(--primary-ink);
+  font-weight: 700;
+  letter-spacing: .2px;
+  box-shadow: 0 10px 20px rgba(34,211,238,.15);
+  transition: transform .06s ease, box-shadow .2s ease, translate .06s ease;
+}
+.btn:hover { text-decoration: none; box-shadow: 0 14px 30px rgba(34,211,238,.2); }
+.btn:active { transform: scale(.98); translate: 0 1px; }
+
+.btn--secondary {
+  background: transparent;
+  color: var(--primary);
+  border: 1px solid color-mix(in oklab, var(--primary) 70%, var(--border));
+}
+.btn--secondary:hover {
+  background: color-mix(in oklab, var(--primary) 12%, transparent);
+}
+
+/* Features */
+.features { padding: 48px 0; }
+.features h3, .contact h3 { margin-top: 0; font-size: 1.5rem; }
+.features__list {
+  list-style: none;
+  padding: 0;
+  margin: 20px 0 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+.features__list li {
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: color-mix(in oklab, var(--surface) 92%, transparent);
+}
+.feat-title { display: block; font-weight: 700; }
+.feat-desc { color: var(--muted); font-size: .95rem; }
+
+/* Contacto */
+.contact { padding: 24px 0 64px; }
+.contact p { color: var(--muted); }
+
+/* Footer */
+.site-footer {
+  border-top: 1px solid var(--border);
+  padding: 18px 0;
+  background: color-mix(in oklab, var(--surface) 92%, transparent);
+}
+.site-footer small { color: var(--muted); }
+
+/* Pequeñas mejoras de accesibilidad */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+/* Responsivo fino */
+@media (max-width: 520px) {
+  .nav a { margin-left: 8px; padding: 8px; }
+  .hero__content { padding: 20px; }
+}

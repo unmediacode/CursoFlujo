@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Página Sencilla</title>
+    <meta name="description" content="Una página muy sencilla hecha con HTML y CSS." />
+
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container">
+        <h1 class="logo">Mi Página</h1>
+        <nav class="nav">
+          <a href="#inicio">Inicio</a>
+          <a href="#caracteristicas">Características</a>
+          <a href="#contacto">Contacto</a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="inicio">
+      <section class="hero container">
+        <div class="hero__content">
+          <h2>Bienvenido/a a tu página sencilla</h2>
+          <p>
+            Esta es una plantilla mínima en HTML y CSS lista para personalizar.
+            Es responsive, accesible y usa estilos modernos.
+          </p>
+          <a class="btn" href="#caracteristicas">Ver más</a>
+        </div>
+      </section>
+
+      <section id="caracteristicas" class="features container">
+        <h3>Características</h3>
+        <ul class="features__list">
+          <li>
+            <span class="feat-title">Estructura limpia</span>
+            <span class="feat-desc">HTML semántico y organizado.</span>
+          </li>
+          <li>
+            <span class="feat-title">Diseño responsive</span>
+            <span class="feat-desc">Se adapta a móviles, tablets y escritorio.</span>
+          </li>
+          <li>
+            <span class="feat-title">Modo claro/oscuro</span>
+            <span class="feat-desc">Respeta la preferencia del sistema.</span>
+          </li>
+        </ul>
+      </section>
+
+      <section id="contacto" class="contact container">
+        <h3>Contacto</h3>
+        <p>
+          ¿Tienes dudas o ideas? Puedes editar este texto o añadir un formulario.
+        </p>
+        <a class="btn btn--secondary" href="#inicio">Volver arriba</a>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <small>© <span id="year"></span> Mi Página. Hecha con ♥ en HTML y CSS.</small>
+      </div>
+    </footer>
+
+    <script>
+      // Inserta el año actual automáticamente
+      document.getElementById('year').textContent = new Date().getFullYear();
+    </script>
+  </body>
+</html>
