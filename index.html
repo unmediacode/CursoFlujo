@@ -103,8 +103,10 @@
             const inThisMonth = !inOtherMonth;
             const dayNum = c.day;
             const isToday = inThisMonth && isSameDay(state.year, state.month, dayNum);
+            const col = idx % 7; // 0=Lu, 5=Sa, 6=Do
+            const isWeekend = col === 5 || col === 6;
             return `
-              <button class="calendar__cell${inOtherMonth ? ' is-other' : ''}${isToday ? ' is-today' : ''}"
+              <button class="calendar__cell${inOtherMonth ? ' is-other' : ''}${isToday ? ' is-today' : ''}${isWeekend ? ' is-weekend' : ''}"
                       role="gridcell" aria-selected="${isToday ? 'true' : 'false'}"
                       tabindex="${idx === 0 ? '0' : '-1'}" data-day="${dayNum}">
                 <span class="calendar__date">${dayNum}</span>

@@ -231,6 +231,10 @@ a:hover { text-decoration: underline; }
   border-color: color-mix(in oklab, var(--accent) 70%, var(--border));
   box-shadow: 0 0 0 2px color-mix(in oklab, var(--accent) 26%, transparent) inset;
 }
+.calendar__cell.is-weekend {
+  background: color-mix(in oklab, var(--accent) 10%, var(--surface));
+  border-color: color-mix(in oklab, var(--accent) 28%, var(--border));
+}
 .calendar__date {
   font-weight: 700;
   font-size: .95rem;
