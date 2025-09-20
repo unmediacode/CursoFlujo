@@ -335,8 +335,6 @@ small.muted { color: var(--muted); }
 .calendar__names {
   margin: 8px 0 0;
   padding-left: 18px;
-  max-height: 70px;
-  overflow: auto;
   color: var(--muted);
   font-size: .85rem;
 }

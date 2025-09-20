@@ -515,8 +515,7 @@
             const isWeekend = idx >= 5; // sab=5, dom=6 en esta lista
             const rows = dataByIso[iso] || [];
             const count = rows.length;
-            const namesPreview = rows.slice(0, 3).map(r => `<li>${escapeHtml(r.name)}</li>`).join('');
-            const more = count > 3 ? `<li class=\"more\">+${count - 3} más</li>` : '';
+            const namesList = rows.map(r => `<li>${escapeHtml(r.name)}</li>`).join('');
             return `
               <button class="calendar__cell${isToday ? ' is-today' : ''}${isWeekend ? ' is-weekend' : ''}"
                       role="gridcell" aria-selected="${isToday ? 'true' : 'false'}"
@@ -524,7 +523,7 @@
                 <div class="calendar__dow">${dow[idx]}</div>
                 <span class="calendar__date">${d.getUTCDate()}</span>
                 ${count > 0 ? `<span class=\"calendar__badge\" title=\"${count} cliente(s)\">${count}</span>` : ''}
-                ${count > 0 ? `<ul class=\"calendar__names\">${namesPreview}${more}</ul>` : ''}
+                ${count > 0 ? `<ul class=\"calendar__names\">${namesList}</ul>` : ''}
               </button>
             `;
           }).join('');
