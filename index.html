@@ -214,42 +214,37 @@
           syncBodyScrollLock();
         }
 
-        function readClientField(el, selector, attr) {
-          const direct = attr ? el.getAttribute(attr) : null;
-          if (direct) return direct;
-          const container = el.closest('.calendar__entry') || el.closest('.client-info');
-          if (!container) return '';
-          if (attr && container.hasAttribute(attr)) {
-            return container.getAttribute(attr) || '';
-          }
-          if (selector) {
-            const target = selector === '.calendar__entry' ? container : container.querySelector(selector);
-            return target ? target.textContent.trim() : '';
-          }
-          return '';
-        }
-
         function attachClientDetailHandlers(root = document) {
           if (!root) return;
           root.querySelectorAll('[data-client-detail]').forEach(el => {
             if (el.dataset.clientDetailBound === '1') return;
             el.dataset.clientDetailBound = '1';
+            const getDetailData = () => {
+              const container = el.closest('.calendar__entry') || el.closest('.client-info') || el.closest('[data-client-name]');
+              const valueFrom = (attr, fallbackSelector) => {
+                if (container && container.hasAttribute(attr)) {
+                  const v = container.getAttribute(attr);
+                  if (v && v.trim()) return v.trim();
+                }
+                if (!container || !fallbackSelector) return '';
+                const target = container.matches(fallbackSelector) ? container : container.querySelector(fallbackSelector);
+                return target ? target.textContent.trim() : '';
+              };
+              return {
+                name: valueFrom('data-client-name', '[data-client-detail]'),
+                phone: valueFrom('data-client-phone', '.calendar__tag--phone'),
+                notes: valueFrom('data-client-notes', '.calendar__tag--notes')
+              };
+            };
+
             el.addEventListener('click', (ev) => {
               ev.stopPropagation();
-              openClientDetail({
-                name: readClientField(el, '.calendar__entry', 'data-client-name') || '',
-                phone: readClientField(el, '.calendar__entry', 'data-client-phone') || '',
-                notes: readClientField(el, '.calendar__entry', 'data-client-notes') || ''
-              });
+              openClientDetail(getDetailData());
             });
             el.addEventListener('keydown', (ev) => {
               if (ev.key === 'Enter' || ev.key === ' ') {
                 ev.preventDefault();
-                openClientDetail({
-                  name: readClientField(el, '.calendar__entry', 'data-client-name') || '',
-                  phone: readClientField(el, '.calendar__entry', 'data-client-phone') || '',
-                  notes: readClientField(el, '.calendar__entry', 'data-client-notes') || ''
-                });
+                openClientDetail(getDetailData());
               }
             });
           });
