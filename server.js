@@ -26,6 +26,10 @@ const db = createClient({
   authToken: TURSO_AUTH_TOKEN,
 });
 
+const app = express();
+app.use(cors());
+app.use(express.json());
+
 // Buscar clientes por nombre (opcional filtrar por año/mes)
 app.get('/api/clients/search', async (req, res) => {
   const { name } = req.query;
@@ -35,7 +39,7 @@ app.get('/api/clients/search', async (req, res) => {
     return res.status(400).json({ ok: false, error: 'Parámetro name requerido' });
   }
   const term = `%${String(name).trim()}%`;
-  let sql = 'select id, name, day, created_at from clients where lower(name) like lower(?)';
+  let sql = 'select id, name, phone, notes, day, created_at from clients where lower(name) like lower(?)';
   const args = [term];
   if (year && month) {
     const yyyy = String(year).padStart(4, '0');
@@ -60,14 +64,47 @@ app.get('/api/clients/search', async (req, res) => {
   }
 });
 
-// Actualizar nombre de cliente por id
+// Actualizar datos de cliente por id
 app.put('/api/clients/:id', async (req, res) => {
   const id = Number(req.params.id);
-  const { name } = req.body ?? {};
+  const { name, phone, notes } = req.body ?? {};
   if (!Number.isInteger(id)) return res.status(400).json({ ok: false, error: 'id inválido' });
-  if (!name || typeof name !== 'string' || !name.trim()) return res.status(400).json({ ok: false, error: 'name requerido' });
+
+  const fields = [];
+  const args = [];
+
+  if (name !== undefined) {
+    if (typeof name !== 'string' || !name.trim()) {
+      return res.status(400).json({ ok: false, error: 'name requerido' });
+    }
+    fields.push('name = ?');
+    args.push(name.trim());
+  }
+
+  if (phone !== undefined) {
+    if (phone !== null && typeof phone !== 'string') {
+      return res.status(400).json({ ok: false, error: 'phone debe ser texto' });
+    }
+    const value = phone == null ? null : phone.trim();
+    fields.push('phone = ?');
+    args.push(value && value.length ? value : null);
+  }
+
+  if (notes !== undefined) {
+    if (notes !== null && typeof notes !== 'string') {
+      return res.status(400).json({ ok: false, error: 'notes debe ser texto' });
+    }
+    const value = notes == null ? null : notes.trim();
+    fields.push('notes = ?');
+    args.push(value && value.length ? value : null);
+  }
+
+  if (!fields.length) {
+    return res.status(400).json({ ok: false, error: 'Sin cambios a guardar' });
+  }
+
   try {
-    const rs = await db.execute({ sql: 'update clients set name = ? where id = ?', args: [name.trim(), id] });
+    const rs = await db.execute({ sql: `update clients set ${fields.join(', ')} where id = ?`, args: [...args, id] });
     let affected = rs.rowsAffected;
     if (affected == null) {
       const ch = await db.execute('select changes() as c');
@@ -80,12 +117,6 @@ app.put('/api/clients/:id', async (req, res) => {
     res.status(500).json({ ok: false, error: err.message });
   }
 });
-
- 
-
-const app = express();
-app.use(cors());
-app.use(express.json());
 
 // Endpoints
 app.get('/api/health', (req, res) => {
@@ -124,8 +155,30 @@ app.post('/api/init', async (req, res) => {
 // Inicializa tabla para clientes por día
 app.post('/api/init-clients', async (req, res) => {
   try {
-    await db.execute("create table if not exists clients (id integer primary key, day text not null, name text not null, created_at text default (datetime('now')))");
-    await db.execute("create index if not exists idx_clients_day on clients(day)");
+    await db.execute(`
+      create table if not exists clients (
+        id integer primary key,
+        day text not null,
+        name text not null,
+        phone text,
+        notes text,
+        created_at text default (datetime('now'))
+      )
+    `);
+
+    try {
+      await db.execute('alter table clients add column phone text');
+    } catch (err) {
+      if (!/duplicate column name/i.test(err.message)) throw err;
+    }
+
+    try {
+      await db.execute('alter table clients add column notes text');
+    } catch (err) {
+      if (!/duplicate column name/i.test(err.message)) throw err;
+    }
+
+    await db.execute('create index if not exists idx_clients_day on clients(day)');
     res.json({ ok: true });
   } catch (err) {
     console.error(err);
@@ -162,8 +215,24 @@ app.get('/api/notes', async (req, res) => {
 
 // Crear cliente para una fecha (solo Lun-Vie, máx 10)
 app.post('/api/clients', async (req, res) => {
-  const { day, name } = req.body ?? {};
+  const { day, name, phone, notes } = req.body ?? {};
   if (!day || !name) return res.status(400).json({ ok: false, error: 'day y name requeridos' });
+  if (phone !== undefined && phone !== null && typeof phone !== 'string') {
+    return res.status(400).json({ ok: false, error: 'phone debe ser texto' });
+  }
+  if (notes !== undefined && notes !== null && typeof notes !== 'string') {
+    return res.status(400).json({ ok: false, error: 'notes debe ser texto' });
+  }
+
+  const trimmedName = String(name).trim();
+  if (!trimmedName) {
+    return res.status(400).json({ ok: false, error: 'name requerido' });
+  }
+
+  const trimmedPhone = phone == null ? null : phone.trim();
+  const safePhone = trimmedPhone && trimmedPhone.length ? trimmedPhone : null;
+  const trimmedNotes = notes == null ? null : notes.trim();
+  const safeNotes = trimmedNotes && trimmedNotes.length ? trimmedNotes : null;
   try {
     // Validar fecha YYYY-MM-DD
     if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) {
@@ -185,7 +254,10 @@ app.post('/api/clients', async (req, res) => {
       return res.status(400).json({ ok: false, error: 'Máximo 10 clientes por día' });
     }
     // Insertar
-    const rs = await db.execute({ sql: 'insert into clients (day, name) values (?, ?) returning id, day, name, created_at', args: [day, name] });
+    const rs = await db.execute({
+      sql: 'insert into clients (day, name, phone, notes) values (?, ?, ?, ?) returning id, day, name, phone, notes, created_at',
+      args: [day, trimmedName, safePhone, safeNotes]
+    });
     res.json({ ok: true, row: rs.rows?.[0] ?? null, remaining: 9 - c });
   } catch (err) {
     console.error(err);
@@ -199,7 +271,7 @@ app.get('/api/clients', async (req, res) => {
   if (!day) return res.status(400).json({ ok: false, error: 'query param day requerido (YYYY-MM-DD)' });
   try {
     const rs = await db.execute({
-      sql: 'select id, name, day, created_at from clients where day = ? order by id asc',
+      sql: 'select id, name, phone, notes, day, created_at from clients where day = ? order by id asc',
       args: [day]
     });
     res.json({ ok: true, rows: rs.rows });
@@ -241,9 +313,22 @@ app.get('/api/clients/summary', async (req, res) => {
   try {
     const rs = await db.execute({
       sql: `
-        select day, count(*) as count
-        from clients
-        where day >= ? and day < ?
+        select day,
+               count(*) as count,
+               coalesce(json_group_array(clients_json), '[]') as clients
+        from (
+          select day,
+                 id,
+                 json_object(
+                   'id', id,
+                   'name', name,
+                   'phone', coalesce(phone, ''),
+                   'notes', coalesce(notes, '')
+                 ) as clients_json
+          from clients
+          where day >= ? and day < ?
+          order by day asc, id asc
+        )
         group by day
       `,
       args: [start, nextMonth]

@@ -64,8 +64,16 @@
               <label>Nombre del cliente</label>
               <input type="text" id="clientName" placeholder="Ej. Juan Pérez" required />
             </div>
+            <div class="form-row">
+              <label>Teléfono</label>
+              <input type="tel" id="clientPhone" placeholder="Ej. 600 123 123" />
+            </div>
+            <div class="form-row">
+              <label>Notas</label>
+              <textarea id="clientNotes" rows="2" placeholder="Observaciones (opcional)"></textarea>
+            </div>
             <div class="form-actions">
-              <button type="submit" class="btn">Guardar</button>
+              <button type="submit" class="btn">Añadir cliente</button>
               <button type="button" class="btn btn--secondary" data-close-modal>Cancelar</button>
             </div>
             <p class="form-error" id="clientError" hidden></p>
@@ -74,6 +82,31 @@
             </div>
             <ul id="clientList" class="client-list" aria-live="polite"></ul>
           </form>
+        </div>
+      </div>
+
+      <!-- Modal de detalle de cliente -->
+      <div class="modal" id="clientDetailModal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="detailTitle">
+        <div class="modal__overlay" data-close-detail></div>
+        <div class="modal__content client-detail" role="document">
+          <h3 id="detailTitle">Detalle del cliente</h3>
+          <dl class="client-detail__list">
+            <div>
+              <dt>Nombre</dt>
+              <dd id="detailName">—</dd>
+            </div>
+            <div>
+              <dt>Teléfono</dt>
+              <dd id="detailPhone">—</dd>
+            </div>
+            <div>
+              <dt>Notas</dt>
+              <dd id="detailNotes">—</dd>
+            </div>
+          </dl>
+          <div class="form-actions client-detail__actions">
+            <button type="button" class="btn btn--secondary" data-close-detail>Cerrar</button>
+          </div>
         </div>
       </div>
 
@@ -124,6 +157,10 @@
         const viewMonthBtn = document.getElementById('viewMonth');
         const viewWeekBtn = document.getElementById('viewWeek');
         const searchBtn = document.getElementById('searchBtn');
+        const detailModal = document.getElementById('clientDetailModal');
+        const detailNameEl = document.getElementById('detailName');
+        const detailPhoneEl = document.getElementById('detailPhone');
+        const detailNotesEl = document.getElementById('detailNotes');
 
         const API_BASE = 'http://localhost:3000';
 
@@ -134,6 +171,58 @@
             .replaceAll('>', '&gt;')
             .replaceAll('"', '&quot;')
             .replaceAll("'", '&#039;');
+        }
+
+        function buildClientTags(client) {
+          if (!client) return '';
+          const name = typeof client.name === 'string' ? client.name.trim() : '';
+          const phone = typeof client.phone === 'string' ? client.phone.trim() : '';
+          const notes = typeof client.notes === 'string' ? client.notes.trim() : '';
+          const attrs = `data-client-detail="true" data-client-name="${escapeHtml(name)}" data-client-phone="${escapeHtml(phone)}" data-client-notes="${escapeHtml(notes)}"`;
+          const parts = [];
+          if (name) parts.push(`<button type="button" class="calendar__tag calendar__tag--name" ${attrs}>${escapeHtml(name)}</button>`);
+          if (phone) parts.push(`<span class="calendar__tag calendar__tag--phone">${escapeHtml(phone)}</span>`);
+          if (notes) parts.push(`<span class="calendar__tag calendar__tag--notes">${escapeHtml(notes)}</span>`);
+          return parts.join('');
+        }
+
+        function buildCalendarEntry(client) {
+          const content = buildClientTags(client);
+          return content ? `<li class="calendar__entry">${content}</li>` : '';
+        }
+
+        function syncBodyScrollLock() {
+          const anyOpen = Array.from(document.querySelectorAll('.modal')).some(modal => modal.getAttribute('aria-hidden') === 'false');
+          document.body.style.overflow = anyOpen ? 'hidden' : '';
+        }
+
+        function openClientDetail({ name, phone, notes }) {
+          detailNameEl.textContent = name || '—';
+          detailPhoneEl.textContent = phone || '—';
+          detailNotesEl.textContent = notes || '—';
+          detailModal.setAttribute('aria-hidden', 'false');
+          syncBodyScrollLock();
+        }
+
+        function closeClientDetail() {
+          detailModal.setAttribute('aria-hidden', 'true');
+          syncBodyScrollLock();
+        }
+
+        function attachClientDetailHandlers(root = document) {
+          if (!root) return;
+          root.querySelectorAll('[data-client-detail]').forEach(el => {
+            if (el.dataset.clientDetailBound === '1') return;
+            el.dataset.clientDetailBound = '1';
+            el.addEventListener('click', (ev) => {
+              ev.stopPropagation();
+              openClientDetail({
+                name: el.getAttribute('data-client-name') || '',
+                phone: el.getAttribute('data-client-phone') || '',
+                notes: el.getAttribute('data-client-notes') || ''
+              });
+            });
+          });
         }
 
         // UI helpers: edición inline
@@ -200,9 +289,24 @@
             const res = await fetch(`${API_BASE}/api/clients/summary?year=${y}&month=${m}`);
             const data = await res.json();
             if (!data.ok) return {};
-            // Mapa YYYY-MM-DD -> count
+            // Mapa YYYY-MM-DD -> { count, clients: [] }
             const map = {};
-            for (const r of data.rows || []) map[r.day] = Number(r.count);
+            for (const r of data.rows || []) {
+              let clients = [];
+              if (Array.isArray(r.clients)) {
+                clients = r.clients;
+              } else if (typeof r.clients === 'string') {
+                try {
+                  clients = JSON.parse(r.clients) || [];
+                } catch (_) {
+                  clients = [];
+                }
+              }
+              map[r.day] = {
+                count: Number(r.count ?? clients.length ?? 0),
+                clients
+              };
+            }
             return map;
           } catch (e) {
             console.error('summary error', e);
@@ -210,14 +314,14 @@
           }
         }
 
-        async function addClient(dayISO, name) {
+        async function addClient({ dayISO, name, phone, notes }) {
           const errEl = document.getElementById('clientError');
           errEl.hidden = true; errEl.textContent = '';
           try {
             const res = await fetch(`${API_BASE}/api/clients`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ day: dayISO, name })
+              body: JSON.stringify({ day: dayISO, name, phone, notes })
             });
             const data = await res.json();
             if (!res.ok || !data.ok) {
@@ -254,17 +358,20 @@
           modalDayISO = dayISO;
           document.getElementById('clientDate').value = dayISO;
           document.getElementById('clientName').value = '';
+          document.getElementById('clientPhone').value = '';
+          document.getElementById('clientNotes').value = '';
           document.getElementById('clientError').hidden = true;
           document.getElementById('clientError').textContent = '';
           const modal = document.getElementById('clientModal');
           modal.setAttribute('aria-hidden', 'false');
-          document.body.style.overflow = 'hidden';
+          syncBodyScrollLock();
+          document.getElementById('clientName').focus();
           loadClientsInModal(dayISO);
         }
         function closeModal() {
           const modal = document.getElementById('clientModal');
           modal.setAttribute('aria-hidden', 'true');
-          document.body.style.overflow = '';
+          syncBodyScrollLock();
         }
 
         // Búsqueda
@@ -273,11 +380,11 @@
           document.getElementById('searchError').hidden = true;
           document.getElementById('searchResults').innerHTML = '';
           document.getElementById('searchModal').setAttribute('aria-hidden', 'false');
-          document.body.style.overflow = 'hidden';
+          syncBodyScrollLock();
         }
         function closeSearch() {
           document.getElementById('searchModal').setAttribute('aria-hidden', 'true');
-          document.body.style.overflow = '';
+          syncBodyScrollLock();
         }
         async function performSearch(name) {
           const errEl = document.getElementById('searchError');
@@ -302,8 +409,16 @@
               const iso = r.day;
               const date = new Date(iso + 'T00:00:00Z');
               const label = `${date.getUTCDate()}/${String(date.getUTCMonth()+1).padStart(2,'0')}/${date.getUTCFullYear()}`;
-              return `<li data-iso="${iso}"><span class="client-name">${escapeHtml(r.name)}</span><small class="muted"> — ${label}</small> <button type=\"button\" class=\"link\" data-open-day>Ver día</button></li>`;
+              const tags = buildClientTags(r);
+              return `
+                <li data-iso="${iso}">
+                  <div class="client-info">${tags}</div>
+                  <small class="muted"> — ${label}</small>
+                  <button type="button" class="link" data-open-day>Ver día</button>
+                </li>
+              `;
             }).join('');
+            attachClientDetailHandlers(list);
             // Ir al día desde resultados
             list.querySelectorAll('[data-open-day]').forEach(btn => {
               btn.addEventListener('click', () => {
@@ -345,7 +460,11 @@
             }
             list.innerHTML = rows.map(r => `
               <li data-id="${r.id}">
-                <span class="client-name" data-text>${escapeHtml(r.name)}</span>
+                <div class="client-info">
+                  <span class="client-name" data-text>${escapeHtml(r.name)}</span>
+                  ${r.phone ? `<span class="client-phone calendar__tag calendar__tag--phone">${escapeHtml(r.phone)}</span>` : ''}
+                  ${r.notes ? `<span class="client-notes calendar__tag calendar__tag--notes">${escapeHtml(r.notes)}</span>` : ''}
+                </div>
                 <span class="client-actions" data-actions>
                   <button type="button" class="link primary" data-edit="${r.id}">Editar</button>
                   <button type="button" class="link danger" data-del="${r.id}">Eliminar</button>
@@ -444,13 +563,18 @@
             const isWeekend = col === 5 || col === 6;
             // Fecha ISO del día para conteo
             const dayISO = `${year}-${String(month + 1).padStart(2,'0')}-${String(dayNum).padStart(2,'0')}`;
-            const count = inThisMonth ? (summary[dayISO] || 0) : 0;
+            const dayInfo = inThisMonth ? summary[dayISO] : undefined;
+            const count = dayInfo ? Number(dayInfo.count) : 0;
+            const entries = dayInfo && Array.isArray(dayInfo.clients)
+              ? dayInfo.clients.map(buildCalendarEntry).filter(Boolean).join('')
+              : '';
             return `
               <button class="calendar__cell${inOtherMonth ? ' is-other' : ''}${isToday ? ' is-today' : ''}${isWeekend ? ' is-weekend' : ''}"
                       role="gridcell" aria-selected="${isToday ? 'true' : 'false'}"
                       tabindex="${idx === 0 ? '0' : '-1'}" data-day="${dayNum}" data-iso="${dayISO}" data-weekend="${isWeekend}" data-other="${inOtherMonth}">
                 <span class="calendar__date">${dayNum}</span>
                 ${inThisMonth && count > 0 ? `<span class="calendar__badge" title="Ver ${count} cliente(s)" data-see="${dayISO}">${count}</span>` : ''}
+                ${entries ? `<ul class="calendar__names">${entries}</ul>` : ''}
               </button>
             `;
           }).join('');
@@ -478,17 +602,7 @@
               openModal(iso);
             });
           });
-        }
-
-        async function fetchCountForDay(dayISO) {
-          try {
-            const res = await fetch(`${API_BASE}/api/clients?day=${dayISO}`);
-            const data = await res.json();
-            if (!data.ok) return 0;
-            return (data.rows || []).length;
-          } catch {
-            return 0;
-          }
+          attachClientDetailHandlers(gridEl);
         }
 
         async function fetchClientsForDay(dayISO) {
@@ -528,7 +642,7 @@
             const isWeekend = idx >= 5; // sab=5, dom=6 en esta lista
             const rows = dataByIso[iso] || [];
             const count = rows.length;
-            const namesList = rows.map(r => `<li>${escapeHtml(r.name)}</li>`).join('');
+            const namesList = rows.map(buildCalendarEntry).filter(Boolean).join('');
             return `
               <button class="calendar__cell${isToday ? ' is-today' : ''}${isWeekend ? ' is-weekend' : ''}"
                       role="gridcell" aria-selected="${isToday ? 'true' : 'false'}"
@@ -536,7 +650,7 @@
                 <div class="calendar__dow">${dow[idx]}</div>
                 <span class="calendar__date">${d.getUTCDate()}</span>
                 ${count > 0 ? `<span class=\"calendar__badge\" title=\"Ver ${count} cliente(s)\" data-see=\"${iso}\">${count}</span>` : ''}
-                ${count > 0 ? `<ul class=\"calendar__names\">${namesList}</ul>` : ''}
+                ${namesList ? `<ul class=\"calendar__names\">${namesList}</ul>` : ''}
               </button>
             `;
           }).join('');
@@ -557,6 +671,7 @@
               openModal(iso);
             });
           });
+          attachClientDetailHandlers(gridEl);
         }
 
         function addMonth(delta) {
@@ -583,6 +698,8 @@
           state.view = view;
           viewMonthBtn.classList.toggle('is-active', view === 'month');
           viewWeekBtn.classList.toggle('is-active', view === 'week');
+          viewMonthBtn.setAttribute('aria-selected', view === 'month' ? 'true' : 'false');
+          viewWeekBtn.setAttribute('aria-selected', view === 'week' ? 'true' : 'false');
           
           // Si cambiamos a vista semanal y se proporciona una fecha, centrar en esa semana
           if (view === 'week' && date) {
@@ -603,6 +720,9 @@
         document.querySelectorAll('[data-close-modal]').forEach(el => {
           el.addEventListener('click', closeModal);
         });
+        document.querySelectorAll('[data-close-detail]').forEach(el => {
+          el.addEventListener('click', closeClientDetail);
+        });
         // Búsqueda: abrir/cerrar y submit
         searchBtn.addEventListener('click', openSearch);
         document.querySelectorAll('[data-close-search]').forEach(el => el.addEventListener('click', closeSearch));
@@ -615,10 +735,29 @@
         // Enviar formulario de modal
         document.getElementById('clientForm').addEventListener('submit', async (e) => {
           e.preventDefault();
-          const name = document.getElementById('clientName').value.trim();
+          const nameInput = document.getElementById('clientName');
+          const phoneInput = document.getElementById('clientPhone');
+          const notesInput = document.getElementById('clientNotes');
+
+          const name = nameInput.value.trim();
           if (!name) return;
-          const ok = await addClient(modalDayISO, name);
-          if (ok) closeModal();
+
+          const phone = phoneInput.value.trim();
+          const notes = notesInput.value.trim();
+
+          const ok = await addClient({
+            dayISO: modalDayISO,
+            name,
+            phone: phone.length ? phone : null,
+            notes: notes.length ? notes : null
+          });
+
+          if (ok) {
+            nameInput.value = '';
+            phoneInput.value = '';
+            notesInput.value = '';
+            nameInput.focus();
+          }
         });
 
         render();

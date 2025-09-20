@@ -192,7 +192,9 @@ small.muted { color: var(--muted); }
 .modal__content h3 { margin: 0 0 10px; }
 .form-row { margin-bottom: 12px; }
 .form-row label { display: block; font-weight: 700; margin-bottom: 6px; }
-.form-row input[type="text"] {
+.form-row input[type="text"],
+.form-row input[type="tel"],
+.form-row textarea {
   width: 100%;
   padding: 10px 12px;
   border-radius: 10px;
@@ -200,8 +202,40 @@ small.muted { color: var(--muted); }
   background: color-mix(in oklab, var(--surface) 94%, transparent);
   color: var(--text);
 }
+.form-row textarea {
+  min-height: 70px;
+  resize: vertical;
+}
 .form-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 12px; }
 .form-error { color: #ef4444; margin-top: 8px; }
+.client-detail {
+  padding-bottom: 12px;
+}
+.client-detail__list {
+  margin: 0;
+  padding: 8px 0 0;
+  display: grid;
+  gap: 10px;
+}
+.client-detail__list div {
+  display: grid;
+  gap: 4px;
+}
+.client-detail__list dt {
+  font-size: .85rem;
+  text-transform: uppercase;
+  letter-spacing: .8px;
+  color: var(--muted);
+}
+.client-detail__list dd {
+  margin: 0;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.client-detail__actions {
+  justify-content: flex-end;
+  margin-top: 18px;
+}
 .client-list {
   list-style: none;
   margin: 12px 0 0;
@@ -212,11 +246,32 @@ small.muted { color: var(--muted); }
 }
 .client-list li {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 10px;
+  flex-wrap: wrap;
   padding: 10px 2px;
   border-bottom: 1px dashed var(--border);
+}
+.client-actions {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+}
+.client-info {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.client-info .inline-input {
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: color-mix(in oklab, var(--surface) 96%, transparent);
+  color: var(--text);
+  width: 180px;
+  max-width: 100%;
 }
 .client-list li .client-name { font-weight: 600; }
 .client-list li .link {
@@ -357,9 +412,48 @@ small.muted { color: var(--muted); }
 }
 .calendar__names {
   margin: 8px 0 0;
-  padding-left: 18px;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 120px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+.calendar__entry {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+}
+.calendar__tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-size: .75rem;
+  font-weight: 600;
+  letter-spacing: .1px;
+  background: color-mix(in oklab, var(--surface) 90%, transparent);
   color: var(--muted);
-  font-size: .85rem;
+  border: none;
+  cursor: default;
+  font-family: inherit;
+}
+.calendar__tag--name {
+  background: color-mix(in oklab, var(--primary) 25%, transparent);
+  color: var(--primary);
+  cursor: pointer;
+}
+.calendar__tag--phone {
+  background: color-mix(in oklab, #22c55e 38%, transparent);
+  color: #064e3b;
+}
+.calendar__tag--notes {
+  background: #facc15;
+  color: #854d0e;
 }
 .calendar__names .more { color: var(--muted); font-style: italic; }
 
