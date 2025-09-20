@@ -152,6 +152,21 @@ app.get('/api/clients', async (req, res) => {
   }
 });
 
+// Eliminar cliente por id
+app.delete('/api/clients/:id', async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) return res.status(400).json({ ok: false, error: 'id inválido' });
+  try {
+    const rs = await db.execute({ sql: 'delete from clients where id = ? returning id', args: [id] });
+    const deleted = rs.rows?.[0]?.id != null;
+    if (!deleted) return res.status(404).json({ ok: false, error: 'Cliente no encontrado' });
+    res.json({ ok: true, id });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 // Resumen por mes: conteo de clientes por día (YYYY, MM 1-12)
 app.get('/api/clients/summary', async (req, res) => {
   const year = parseInt(req.query.year, 10);

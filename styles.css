@@ -200,6 +200,36 @@ a:hover { text-decoration: underline; }
 }
 .form-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 12px; }
 .form-error { color: #ef4444; margin-top: 8px; }
+.client-list {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  max-height: 240px;
+  overflow: auto;
+  border-top: 1px dashed var(--border);
+}
+.client-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 2px;
+  border-bottom: 1px dashed var(--border);
+}
+.client-list li .client-name { font-weight: 600; }
+.client-list li .link {
+  background: transparent;
+  border: none;
+  color: var(--primary);
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 4px 6px;
+  border-radius: 8px;
+}
+.client-list li .link:hover { background: color-mix(in oklab, var(--primary) 12%, transparent); }
+.client-list li .link.danger { color: #f87171; }
+.client-list li .link.danger:hover { background: color-mix(in oklab, #f87171 14%, transparent); }
+.client-meta { margin-top: 8px; color: var(--muted); }
 /* Calendario */
 .calendar {
   margin: 48px auto;
@@ -276,6 +306,11 @@ a:hover { text-decoration: underline; }
 .calendar__date {
   font-weight: 700;
   font-size: .95rem;
+}
+.calendar__dow {
+  color: var(--muted);
+  font-size: .85rem;
+  margin-bottom: 6px;
 }
 
 .calendar__badge {

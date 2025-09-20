@@ -68,6 +68,10 @@
               <button type="button" class="btn btn--secondary" data-close-modal>Cancelar</button>
             </div>
             <p class="form-error" id="clientError" hidden></p>
+            <div class="client-meta">
+              <small id="clientRemaining"></small>
+            </div>
+            <ul id="clientList" class="client-list" aria-live="polite"></ul>
           </form>
         </div>
       </div>
@@ -134,6 +138,7 @@
               return false;
             }
             await render();
+            await loadClientsInModal(dayISO);
             return true;
           } catch (e) {
             console.error(e);
@@ -166,11 +171,63 @@
           const modal = document.getElementById('clientModal');
           modal.setAttribute('aria-hidden', 'false');
           document.body.style.overflow = 'hidden';
+          loadClientsInModal(dayISO);
         }
         function closeModal() {
           const modal = document.getElementById('clientModal');
           modal.setAttribute('aria-hidden', 'true');
           document.body.style.overflow = '';
+        }
+
+        async function loadClientsInModal(dayISO) {
+          const list = document.getElementById('clientList');
+          const remainingEl = document.getElementById('clientRemaining');
+          list.innerHTML = '<li class="muted">Cargando...</li>';
+          remainingEl.textContent = '';
+          try {
+            const res = await fetch(`${API_BASE}/api/clients?day=${dayISO}`);
+            const data = await res.json();
+            if (!res.ok || !data.ok) {
+              list.innerHTML = `<li class="error">${data.error || 'Error al cargar'}</li>`;
+              return;
+            }
+            const rows = data.rows || [];
+            const remaining = Math.max(0, 10 - rows.length);
+            remainingEl.textContent = `Plazas restantes: ${remaining} / 10`;
+            if (rows.length === 0) {
+              list.innerHTML = '<li class="muted">Sin clientes para este día</li>';
+              return;
+            }
+            list.innerHTML = rows.map(r => `
+              <li data-id="${r.id}">
+                <span class="client-name">${r.name}</span>
+                <button type="button" class="link danger" data-del="${r.id}">Eliminar</button>
+              </li>
+            `).join('');
+            list.querySelectorAll('[data-del]').forEach(btn => {
+              btn.addEventListener('click', async () => {
+                const id = btn.getAttribute('data-del');
+                await deleteClient(id, dayISO);
+              });
+            });
+          } catch (e) {
+            list.innerHTML = '<li class="error">Error de red</li>';
+          }
+        }
+
+        async function deleteClient(id, dayISO) {
+          try {
+            const res = await fetch(`${API_BASE}/api/clients/${id}`, { method: 'DELETE' });
+            const data = await res.json();
+            if (!res.ok || !data.ok) {
+              alert(data.error || 'No se pudo eliminar');
+              return;
+            }
+            await render();
+            await loadClientsInModal(dayISO);
+          } catch (e) {
+            alert('Error de red');
+          }
         }
 
         async function render() {
@@ -271,6 +328,7 @@
             counts[iso] = await fetchCountForDay(iso);
           }
 
+          const dow = ['Lu','Ma','Mi','Ju','Vi','Sa','Do'];
           gridEl.innerHTML = days.map((d, idx) => {
             const iso = `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`;
             const today = new Date();
@@ -281,6 +339,7 @@
               <button class="calendar__cell${isToday ? ' is-today' : ''}${isWeekend ? ' is-weekend' : ''}"
                       role="gridcell" aria-selected="${isToday ? 'true' : 'false'}"
                       data-iso="${iso}" data-weekend="${isWeekend}" data-other="false">
+                <div class="calendar__dow">${dow[idx]}</div>
                 <span class="calendar__date">${d.getUTCDate()}</span>
                 ${count > 0 ? `<span class=\"calendar__badge\" title=\"${count} cliente(s)\">${count}</span>` : ''}
               </button>
