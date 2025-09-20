@@ -450,8 +450,7 @@
                       role="gridcell" aria-selected="${isToday ? 'true' : 'false'}"
                       tabindex="${idx === 0 ? '0' : '-1'}" data-day="${dayNum}" data-iso="${dayISO}" data-weekend="${isWeekend}" data-other="${inOtherMonth}">
                 <span class="calendar__date">${dayNum}</span>
-                ${inThisMonth && count > 0 ? `<span class="calendar__badge" title="${count} cliente(s)">${count}</span>` : ''}
-                ${inThisMonth && count > 0 ? `<button type="button" class="link see-all" data-see="${dayISO}">Ver todos</button>` : ''}
+                ${inThisMonth && count > 0 ? `<span class="calendar__badge" title="Ver ${count} cliente(s)" data-see="${dayISO}">${count}</span>` : ''}
               </button>
             `;
           }).join('');
@@ -466,11 +465,11 @@
               openModal(iso);
             });
           });
-          // Botón Ver todos: abre el modal incluso en fines de semana
-          gridEl.querySelectorAll('[data-see]').forEach((btn) => {
-            btn.addEventListener('click', (e) => {
+          // Click en el badge: abre el modal del día (incluso fines de semana)
+          gridEl.querySelectorAll('.calendar__badge[data-see]').forEach((badge) => {
+            badge.addEventListener('click', (e) => {
               e.stopPropagation();
-              const iso = btn.getAttribute('data-see');
+              const iso = badge.getAttribute('data-see');
               openModal(iso);
             });
           });
@@ -531,9 +530,8 @@
                       data-iso="${iso}" data-weekend="${isWeekend}" data-other="false">
                 <div class="calendar__dow">${dow[idx]}</div>
                 <span class="calendar__date">${d.getUTCDate()}</span>
-                ${count > 0 ? `<span class=\"calendar__badge\" title=\"${count} cliente(s)\">${count}</span>` : ''}
+                ${count > 0 ? `<span class=\"calendar__badge\" title=\"Ver ${count} cliente(s)\" data-see=\"${iso}\">${count}</span>` : ''}
                 ${count > 0 ? `<ul class=\"calendar__names\">${namesList}</ul>` : ''}
-                ${count > 0 ? `<button type=\"button\" class=\"link see-all\" data-see=\"${iso}\">Ver todos</button>` : ''}
               </button>
             `;
           }).join('');
@@ -546,11 +544,11 @@
               openModal(iso);
             });
           });
-          // Botón Ver todos
-          gridEl.querySelectorAll('[data-see]').forEach((btn) => {
-            btn.addEventListener('click', (e) => {
+          // Click en el badge: abre el modal del día (vista semanal)
+          gridEl.querySelectorAll('.calendar__badge[data-see]').forEach((badge) => {
+            badge.addEventListener('click', (e) => {
               e.stopPropagation();
-              const iso = btn.getAttribute('data-see');
+              const iso = badge.getAttribute('data-see');
               openModal(iso);
             });
           });
