@@ -100,7 +100,7 @@
 
     <footer class="site-footer">
       <div class="container">
-        <small>© <span id="year"></span> Mi Página. Hecha con ♥ en HTML y CSS.</small>
+        <small>© 2025 — Hecha por su hermano, Miguel Taboada, con amor ❤️</small>
       </div>
     </footer>
 
@@ -451,6 +451,7 @@
                       tabindex="${idx === 0 ? '0' : '-1'}" data-day="${dayNum}" data-iso="${dayISO}" data-weekend="${isWeekend}" data-other="${inOtherMonth}">
                 <span class="calendar__date">${dayNum}</span>
                 ${inThisMonth && count > 0 ? `<span class="calendar__badge" title="${count} cliente(s)">${count}</span>` : ''}
+                ${inThisMonth && count > 0 ? `<button type="button" class="link see-all" data-see="${dayISO}">Ver todos</button>` : ''}
               </button>
             `;
           }).join('');
@@ -462,6 +463,14 @@
               const isWeekendAttr = btn.getAttribute('data-weekend') === 'true';
               if (isOther || isWeekendAttr) return; // no permitir otros meses ni fines de semana
               const iso = btn.getAttribute('data-iso');
+              openModal(iso);
+            });
+          });
+          // Botón Ver todos: abre el modal incluso en fines de semana
+          gridEl.querySelectorAll('[data-see]').forEach((btn) => {
+            btn.addEventListener('click', (e) => {
+              e.stopPropagation();
+              const iso = btn.getAttribute('data-see');
               openModal(iso);
             });
           });
@@ -524,6 +533,7 @@
                 <span class="calendar__date">${d.getUTCDate()}</span>
                 ${count > 0 ? `<span class=\"calendar__badge\" title=\"${count} cliente(s)\">${count}</span>` : ''}
                 ${count > 0 ? `<ul class=\"calendar__names\">${namesList}</ul>` : ''}
+                ${count > 0 ? `<button type=\"button\" class=\"link see-all\" data-see=\"${iso}\">Ver todos</button>` : ''}
               </button>
             `;
           }).join('');
@@ -533,6 +543,14 @@
               const isWeekendAttr = btn.getAttribute('data-weekend') === 'true';
               if (isWeekendAttr) return;
               const iso = btn.getAttribute('data-iso');
+              openModal(iso);
+            });
+          });
+          // Botón Ver todos
+          gridEl.querySelectorAll('[data-see]').forEach((btn) => {
+            btn.addEventListener('click', (e) => {
+              e.stopPropagation();
+              const iso = btn.getAttribute('data-see');
               openModal(iso);
             });
           });
