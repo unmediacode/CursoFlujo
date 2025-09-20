@@ -455,14 +455,25 @@
             `;
           }).join('');
 
-          // Click para añadir cliente (solo días del mes actual y laborales)
+          // Click en celda: cambia a vista semanal centrada en esa fecha
           gridEl.querySelectorAll('.calendar__cell').forEach((btn) => {
-            btn.addEventListener('click', async () => {
+            btn.addEventListener('click', async (e) => {
+              // Si el clic fue en el badge, manejarlo aparte (ya que tiene su propio manejador)
+              if (e.target.closest('.calendar__badge')) return;
+              
               const isOther = btn.getAttribute('data-other') === 'true';
               const isWeekendAttr = btn.getAttribute('data-weekend') === 'true';
-              if (isOther || isWeekendAttr) return; // no permitir otros meses ni fines de semana
+              if (isOther) return; // No hacer nada en celdas de otros meses
+              
               const iso = btn.getAttribute('data-iso');
-              openModal(iso);
+              // Cambiar a vista semanal centrada en esta fecha
+              state.view = 'week';
+              state.weekAnchor = new Date(iso);
+              // Actualizar el botón de vista activa
+              document.querySelector('.view-toggle .active').classList.remove('active');
+              document.querySelector('.view-toggle [data-view="week"]').classList.add('active');
+              // Renderizar la vista semanal
+              await render();
             });
           });
           // Click en el badge: abre el modal del día (incluso fines de semana)
@@ -562,9 +573,16 @@
         }
         function addWeek(delta) {
           const d = new Date(state.weekAnchor);
-          d.setUTCDate(d.getUTCDate() + delta * 7);
+          d.setDate(d.getDate() + (delta * 7));
           state.weekAnchor = d;
           render();
+        }
+        
+        function startOfWeek(date) {
+          const d = new Date(date);
+          const day = d.getUTCDay();
+          const diff = d.getUTCDate() - day + (day === 0 ? -6 : 1); // Ajuste para que la semana empiece en lunes
+          return new Date(d.setUTCDate(diff));
         }
 
         // Navegación según vista
@@ -572,14 +590,25 @@
         nextBtn.addEventListener('click', () => state.view === 'month' ? addMonth(1) : addWeek(1));
 
         // Toggle de vista
-        function setView(view) {
+        function setView(view, date = null) {
+          if (state.view === view && !date) return; // Ya está en esta vista
+          
           state.view = view;
           viewMonthBtn.classList.toggle('is-active', view === 'month');
           viewWeekBtn.classList.toggle('is-active', view === 'week');
-          viewMonthBtn.setAttribute('aria-selected', view === 'month' ? 'true' : 'false');
-          viewWeekBtn.setAttribute('aria-selected', view === 'week' ? 'true' : 'false');
+          
+          // Si cambiamos a vista semanal y se proporciona una fecha, centrar en esa semana
+          if (view === 'week' && date) {
+            state.weekAnchor = new Date(date);
+          } 
+          // Si cambiamos a vista semanal sin fecha, usar la semana actual
+          else if (view === 'week' && !state.weekAnchor) {
+            state.weekAnchor = new Date();
+          }
+          
           render();
         }
+        
         viewMonthBtn.addEventListener('click', () => setView('month'));
         viewWeekBtn.addEventListener('click', () => setView('week'));
 
