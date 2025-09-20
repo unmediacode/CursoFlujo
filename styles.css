@@ -163,6 +163,43 @@ a:hover { text-decoration: underline; }
   outline-offset: 3px;
   border-radius: 6px;
 }
+/* Modal */
+.modal[aria-hidden="true"] { display: none; }
+.modal[aria-hidden="false"] { display: block; }
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+}
+.modal__overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,.5);
+  backdrop-filter: blur(2px);
+}
+.modal__content {
+  position: relative;
+  width: min(520px, 92%);
+  margin: 8vh auto 0;
+  background: color-mix(in oklab, var(--surface) 96%, transparent);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  padding: 20px;
+}
+.modal__content h3 { margin: 0 0 10px; }
+.form-row { margin-bottom: 12px; }
+.form-row label { display: block; font-weight: 700; margin-bottom: 6px; }
+.form-row input[type="text"] {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: color-mix(in oklab, var(--surface) 94%, transparent);
+  color: var(--text);
+}
+.form-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 12px; }
+.form-error { color: #ef4444; margin-top: 8px; }
 /* Calendario */
 .calendar {
   margin: 48px auto;

@@ -40,6 +40,29 @@
           <div class="calendar__grid" id="calGrid" role="grid" aria-readonly="true" aria-label="Días del mes"></div>
         </div>
       </section>
+      
+      <!-- Modal para añadir cliente -->
+      <div class="modal" id="clientModal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <div class="modal__overlay" data-close-modal></div>
+        <div class="modal__content" role="document">
+          <h3 id="modalTitle">Añadir cliente</h3>
+          <form id="clientForm">
+            <div class="form-row">
+              <label>Fecha</label>
+              <input type="text" id="clientDate" readonly />
+            </div>
+            <div class="form-row">
+              <label>Nombre del cliente</label>
+              <input type="text" id="clientName" placeholder="Ej. Juan Pérez" required />
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="btn">Guardar</button>
+              <button type="button" class="btn btn--secondary" data-close-modal>Cancelar</button>
+            </div>
+            <p class="form-error" id="clientError" hidden></p>
+          </form>
+        </div>
+      </div>
     </main>
 
     <footer class="site-footer">
@@ -85,10 +108,10 @@
           }
         }
 
-        async function addClient(dayISO) {
+        async function addClient(dayISO, name) {
+          const errEl = document.getElementById('clientError');
+          errEl.hidden = true; errEl.textContent = '';
           try {
-            const name = prompt('Nombre del cliente para ' + dayISO + ':');
-            if (!name) return;
             const res = await fetch(`${API_BASE}/api/clients`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -96,15 +119,36 @@
             });
             const data = await res.json();
             if (!res.ok || !data.ok) {
-              alert(data.error || 'Error al añadir cliente');
-              return;
+              errEl.textContent = data.error || 'Error al añadir cliente';
+              errEl.hidden = false;
+              return false;
             }
-            // Re-render para actualizar conteos
             await render();
+            return true;
           } catch (e) {
             console.error(e);
-            alert('Error de red');
+            const errEl = document.getElementById('clientError');
+            errEl.textContent = 'Error de red';
+            errEl.hidden = false;
+            return false;
           }
+        }
+
+        let modalDayISO = null;
+        function openModal(dayISO) {
+          modalDayISO = dayISO;
+          document.getElementById('clientDate').value = dayISO;
+          document.getElementById('clientName').value = '';
+          document.getElementById('clientError').hidden = true;
+          document.getElementById('clientError').textContent = '';
+          const modal = document.getElementById('clientModal');
+          modal.setAttribute('aria-hidden', 'false');
+          document.body.style.overflow = 'hidden';
+        }
+        function closeModal() {
+          const modal = document.getElementById('clientModal');
+          modal.setAttribute('aria-hidden', 'true');
+          document.body.style.overflow = '';
         }
 
         async function render() {
@@ -167,7 +211,7 @@
               const isWeekendAttr = btn.getAttribute('data-weekend') === 'true';
               if (isOther || isWeekendAttr) return; // no permitir otros meses ni fines de semana
               const iso = btn.getAttribute('data-iso');
-              await addClient(iso);
+              openModal(iso);
             });
           });
         }
@@ -181,6 +225,19 @@
 
         prevBtn.addEventListener('click', () => addMonth(-1));
         nextBtn.addEventListener('click', () => addMonth(1));
+
+        // Cerrar modal
+        document.querySelectorAll('[data-close-modal]').forEach(el => {
+          el.addEventListener('click', closeModal);
+        });
+        // Enviar formulario de modal
+        document.getElementById('clientForm').addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const name = document.getElementById('clientName').value.trim();
+          if (!name) return;
+          const ok = await addClient(modalDayISO, name);
+          if (ok) closeModal();
+        });
 
         render();
       })();
