@@ -840,34 +840,55 @@
 
           const summary = await fetchSummary(year, month);
           if (state.view === 'month-full') {
-            const daysInMonth = new Date(year, month + 1, 0).getDate();
-            const view = [];
-            for (let dayNum = 1; dayNum <= daysInMonth; dayNum++) {
-              const dayISO = `${year}-${String(month + 1).padStart(2,'0')}-${String(dayNum).padStart(2,'0')}`;
-              const dayInfo = summary[dayISO];
-              const clients = dayInfo && Array.isArray(dayInfo.clients) ? dayInfo.clients : [];
-              const count = clients.length;
-              const entries = clients.map((client) => buildCalendarEntry(client, dayISO)).filter(Boolean).join('');
-              const empty = '<p class="calendar-full__empty">Sin clientes</p>';
-              view.push(`
-                <article class="calendar-full__day" data-iso="${dayISO}" data-count="${count}">
-                  <header class="calendar-full__head">
-                    <div class="calendar-full__label">
-                      <span class="calendar-full__date">${String(dayNum).padStart(2,'0')}</span>
-                    </div>
-                    <div class="calendar-full__actions">
-                      ${count > 0 ? `<span class="calendar__badge" data-count="${count}" data-see="${dayISO}" title="Ver ${count} cliente(s)">${count}</span>` : ''}
-                      <button type="button" class="calendar-full__open" data-open-day="${dayISO}">Gestionar</button>
-                    </div>
-                  </header>
-                  ${entries ? `<ul class="calendar__names calendar-full__names">${entries}</ul>` : empty}
-                </article>
-              `);
+            const weeks = [];
+            const start = startOfWeek(new Date(Date.UTC(year, month, 1)));
+            const lastDay = new Date(Date.UTC(year, month + 1, 0));
+            const end = startOfWeek(lastDay);
+            end.setUTCDate(end.getUTCDate() + 6);
+            const cursor = new Date(start);
+            while (cursor <= end) {
+              const buttons = [];
+              for (let i = 0; i < 7; i++) {
+                const current = new Date(cursor);
+                const iso = `${current.getUTCFullYear()}-${String(current.getUTCMonth() + 1).padStart(2,'0')}-${String(current.getUTCDate()).padStart(2,'0')}`;
+                const inThisMonth = current.getUTCMonth() === month;
+                const isWeekend = current.getUTCDay() === 0 || current.getUTCDay() === 6;
+                const dayInfo = summary[iso];
+                let clients = [];
+                if (dayInfo) {
+                  if (Array.isArray(dayInfo.clients)) clients = dayInfo.clients;
+                  else if (typeof dayInfo.clients === 'string') {
+                    try { const parsed = JSON.parse(dayInfo.clients); if (Array.isArray(parsed)) clients = parsed; } catch (_) {}
+                  }
+                }
+                const count = inThisMonth ? (dayInfo ? Number(dayInfo.count ?? clients.length ?? 0) : clients.length) : 0;
+                const namesList = inThisMonth && clients.length
+                  ? clients.map((client) => buildCalendarEntry(client, iso)).filter(Boolean).join('')
+                  : '';
+                const isTodayCell = inThisMonth && isSameDay(current.getUTCFullYear(), current.getUTCMonth(), current.getUTCDate());
+                const classes = ['calendar__cell'];
+                if (!inThisMonth) classes.push('is-other');
+                if (isWeekend) classes.push('is-weekend');
+                if (isTodayCell) classes.push('is-today');
+                buttons.push(`
+                  <button class="${classes.join(' ')}"
+                          role="gridcell" aria-selected="${isTodayCell ? 'true' : 'false'}"
+                          data-iso="${iso}" data-weekend="${isWeekend}" data-other="${inThisMonth ? 'false' : 'true'}" data-count="${count}">
+                    <div class="calendar__dow">${['Lu','Ma','Mi','Ju','Vi','Sa','Do'][i]}</div>
+                    <span class="calendar__date">${current.getUTCDate()}</span>
+                    ${count > 0 ? `<span class="calendar__badge" data-count="${count}" data-see="${iso}" title="Ver ${count} cliente(s)">${count}</span>` : ''}
+                    ${namesList ? `<ul class="calendar__names">${namesList}</ul>` : ''}
+                  </button>
+                `);
+                cursor.setUTCDate(cursor.getUTCDate() + 1);
+              }
+              weeks.push(`<div class="calendar-week-row">${buttons.join('')}</div>`);
             }
-            gridEl.innerHTML = view.join('');
-            gridEl.querySelectorAll('.calendar-full__open').forEach((btn) => {
+            gridEl.innerHTML = weeks.join('');
+            gridEl.querySelectorAll('.calendar-week-row .calendar__cell').forEach((btn) => {
               btn.addEventListener('click', () => {
-                const iso = btn.getAttribute('data-open-day');
+                if (btn.getAttribute('data-other') === 'true') return;
+                const iso = btn.getAttribute('data-iso');
                 if (iso) openModal(iso);
               });
             });
