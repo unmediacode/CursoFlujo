@@ -127,6 +127,7 @@
             <div class="form-actions client-detail__actions">
               <button type="submit" class="btn">Guardar cambios</button>
               <button type="button" class="btn btn--secondary" data-reset-detail>Restablecer</button>
+              <button type="button" class="btn btn--danger" data-delete-detail>Eliminar cliente</button>
               <button type="button" class="btn btn--secondary" data-close-detail>Cerrar</button>
             </div>
           </form>
@@ -215,6 +216,7 @@
         const detailNotesInput = document.getElementById('detailNotesInput');
         const detailErrorEl = document.getElementById('detailError');
         const detailResetBtn = document.querySelector('[data-reset-detail]');
+        const detailDeleteBtn = document.querySelector('[data-delete-detail]');
 
         const API_BASE = 'http://localhost:3000';
 
@@ -1052,6 +1054,20 @@
             showDetailMessage('Cambios guardados correctamente.', true);
             await render();
             if (detailContext.day) await loadClientsInModal(detailContext.day);
+          });
+        }
+        if (detailDeleteBtn) {
+          detailDeleteBtn.addEventListener('click', async () => {
+            if (!detailContext || detailContext.id == null) {
+              showDetailMessage('No se pudo identificar al cliente.');
+              return;
+            }
+            const confirmDelete = window.confirm('¿Eliminar este cliente? Esta acción no se puede deshacer.');
+            if (!confirmDelete) return;
+            const dayISO = detailContext.day;
+            await deleteClient(detailContext.id, dayISO);
+            showDetailMessage('Cliente eliminado.', true);
+            closeClientDetail();
           });
         }
         // Búsqueda: abrir/cerrar y submit

@@ -126,6 +126,14 @@ small.muted { color: var(--muted); }
 .btn--secondary:hover {
   background: color-mix(in oklab, var(--primary) 12%, transparent);
 }
+.btn.btn--danger {
+  background: #ef4444;
+  border: 1px solid color-mix(in oklab, #ef4444 80%, var(--border));
+  color: #fee2e2;
+}
+.btn.btn--danger:hover {
+  background: #dc2626;
+}
 
 /* Features */
 .features { padding: 48px 0; }
