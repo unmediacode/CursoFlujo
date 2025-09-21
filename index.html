@@ -180,7 +180,7 @@
 
     <footer class="site-footer">
       <div class="container">
-        <small>© 2025 — Hecha por su hermano, Miguel Taboada, con amor ❤️</small>
+        <small>© 2025 — Creada por, Miguel Taboada </small>
       </div>
     </footer>
 
@@ -806,11 +806,9 @@
             gridEl.setAttribute('role', 'grid');
             return renderWeek();
           }
-          gridEl.setAttribute('role', 'grid');
+          gridEl.setAttribute('role', isFullMonth ? 'list' : 'grid');
           const { year, month } = state;
-          titleEl.textContent = isFullMonth
-            ? `${monthNames[month]} ${year} — vista completa`
-            : monthNames[month] + ' ' + year;
+          titleEl.textContent = monthNames[month] + ' ' + year + (isFullMonth ? ' — vista completa' : '');
 
           // Calcula desde lunes (0) a domingo (6)
           const firstDay = new Date(year, month, 1);
@@ -841,52 +839,80 @@
           const isSameDay = (y, m, d) => today.getFullYear() === y && today.getMonth() === m && today.getDate() === d;
 
           const summary = await fetchSummary(year, month);
-          gridEl.innerHTML = cells.map((c, idx) => {
-            const inOtherMonth = c.other;
-            const inThisMonth = !inOtherMonth;
-            const dayNum = c.day;
-            const isToday = inThisMonth && isSameDay(state.year, state.month, dayNum);
-            const col = idx % 7; // 0=Lu, 5=Sa, 6=Do
-            const isWeekend = col === 5 || col === 6;
-            // Fecha ISO del día para conteo
-            const dayISO = `${year}-${String(month + 1).padStart(2,'0')}-${String(dayNum).padStart(2,'0')}`;
-            const dayInfo = inThisMonth ? summary[dayISO] : undefined;
-            const count = dayInfo ? Number(dayInfo.count) : 0;
-            const entries = dayInfo && Array.isArray(dayInfo.clients)
-              ? dayInfo.clients.map((client) => buildCalendarEntry(client, dayISO)).filter(Boolean).join('')
-              : '';
-            return `
-              <button class="calendar__cell${inOtherMonth ? ' is-other' : ''}${isToday ? ' is-today' : ''}${isWeekend ? ' is-weekend' : ''}"
-                      role="gridcell" aria-selected="${isToday ? 'true' : 'false'}"
-                      tabindex="${idx === 0 ? '0' : '-1'}" data-day="${dayNum}" data-iso="${dayISO}" data-weekend="${isWeekend}" data-other="${inOtherMonth}" data-count="${count}">
-                <span class="calendar__date">${dayNum}</span>
-                ${inThisMonth && count > 0 ? `<span class="calendar__badge" data-count="${count}" title="Ver ${count} cliente(s)" data-see="${dayISO}">${count}</span>` : ''}
-                ${entries ? `<ul class="calendar__names">${entries}</ul>` : ''}
-              </button>
-            `;
-          }).join('');
-
-          // Click en celda: cambia a vista semanal centrada en esa fecha
-          gridEl.querySelectorAll('.calendar__cell').forEach((btn) => {
-            btn.addEventListener('click', (e) => {
-              // Si el clic fue en el badge, manejarlo aparte (ya que tiene su propio manejador)
-              if (e.target.closest('.calendar__badge')) return;
-
-              if (btn.getAttribute('data-other') === 'true') return; // Ignorar celdas de otros meses
-
-              const iso = btn.getAttribute('data-iso');
-              const [year, monthIndex, day] = iso.split('-').map(Number);
-              const targetDate = new Date(year, monthIndex - 1, day);
-
-              setView('week', targetDate);
+          if (state.view === 'month-full') {
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const view = [];
+            for (let dayNum = 1; dayNum <= daysInMonth; dayNum++) {
+              const dayISO = `${year}-${String(month + 1).padStart(2,'0')}-${String(dayNum).padStart(2,'0')}`;
+              const dayInfo = summary[dayISO];
+              const clients = dayInfo && Array.isArray(dayInfo.clients) ? dayInfo.clients : [];
+              const count = clients.length;
+              const entries = clients.map((client) => buildCalendarEntry(client, dayISO)).filter(Boolean).join('');
+              const empty = '<p class="calendar-full__empty">Sin clientes</p>';
+              view.push(`
+                <article class="calendar-full__day" data-iso="${dayISO}" data-count="${count}">
+                  <header class="calendar-full__head">
+                    <div class="calendar-full__label">
+                      <span class="calendar-full__date">${String(dayNum).padStart(2,'0')}</span>
+                    </div>
+                    <div class="calendar-full__actions">
+                      ${count > 0 ? `<span class="calendar__badge" data-count="${count}" data-see="${dayISO}" title="Ver ${count} cliente(s)">${count}</span>` : ''}
+                      <button type="button" class="calendar-full__open" data-open-day="${dayISO}">Gestionar</button>
+                    </div>
+                  </header>
+                  ${entries ? `<ul class="calendar__names calendar-full__names">${entries}</ul>` : empty}
+                </article>
+              `);
+            }
+            gridEl.innerHTML = view.join('');
+            gridEl.querySelectorAll('.calendar-full__open').forEach((btn) => {
+              btn.addEventListener('click', () => {
+                const iso = btn.getAttribute('data-open-day');
+                if (iso) openModal(iso);
+              });
             });
-          });
-          // Click en el badge: abre el modal del día (incluso fines de semana)
+          } else {
+            gridEl.innerHTML = cells.map((c, idx) => {
+              const inOtherMonth = c.other;
+              const inThisMonth = !inOtherMonth;
+              const dayNum = c.day;
+              const isToday = inThisMonth && isSameDay(state.year, state.month, dayNum);
+              const col = idx % 7;
+              const isWeekend = col === 5 || col === 6;
+              const dayISO = `${year}-${String(month + 1).padStart(2,'0')}-${String(dayNum).padStart(2,'0')}`;
+              const dayInfo = inThisMonth ? summary[dayISO] : undefined;
+              const count = dayInfo ? Number(dayInfo.count) : 0;
+              const entries = dayInfo && Array.isArray(dayInfo.clients)
+                ? dayInfo.clients.map((client) => buildCalendarEntry(client, dayISO)).filter(Boolean).join('')
+                : '';
+              return `
+                <button class="calendar__cell${inOtherMonth ? ' is-other' : ''}${isToday ? ' is-today' : ''}${isWeekend ? ' is-weekend' : ''}"
+                        role="gridcell" aria-selected="${isToday ? 'true' : 'false'}"
+                        tabindex="${idx === 0 ? '0' : '-1'}" data-day="${dayNum}" data-iso="${dayISO}" data-weekend="${isWeekend}" data-other="${inOtherMonth}" data-count="${count}">
+                  <span class="calendar__date">${dayNum}</span>
+                  ${inThisMonth && count > 0 ? `<span class="calendar__badge" data-count="${count}" title="Ver ${count} cliente(s)" data-see="${dayISO}">${count}</span>` : ''}
+                  ${entries ? `<ul class="calendar__names">${entries}</ul>` : ''}
+                </button>
+              `;
+            }).join('');
+
+            gridEl.querySelectorAll('.calendar__cell').forEach((btn) => {
+              btn.addEventListener('click', (e) => {
+                if (e.target.closest('.calendar__badge')) return;
+                if (btn.getAttribute('data-other') === 'true') return;
+                const iso = btn.getAttribute('data-iso');
+                const [yearVal, monthIndex, dayNumVal] = iso.split('-').map(Number);
+                const targetDate = new Date(yearVal, monthIndex - 1, dayNumVal);
+                setView('week', targetDate);
+              });
+            });
+          }
+
           gridEl.querySelectorAll('.calendar__badge[data-see]').forEach((badge) => {
             badge.addEventListener('click', (e) => {
               e.stopPropagation();
               const iso = badge.getAttribute('data-see');
-              openModal(iso);
+              if (iso) openModal(iso);
             });
           });
           attachClientDetailHandlers(gridEl);
