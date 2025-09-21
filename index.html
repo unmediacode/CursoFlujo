@@ -35,6 +35,7 @@
           <div class="view-toggle" role="tablist" aria-label="Selector de vista">
             <button id="viewMonth" class="view-toggle__btn is-active" role="tab" aria-selected="true">Mensual</button>
             <button id="viewWeek" class="view-toggle__btn" role="tab" aria-selected="false">Semanal</button>
+            <button id="viewMonthFull" class="view-toggle__btn" role="tab" aria-selected="false">Mensual completa</button>
           </div>
 
           <div class="calendar__weekdays" aria-hidden="true">
@@ -204,6 +205,7 @@
         const nextBtn = document.getElementById('nextBtn');
         const viewMonthBtn = document.getElementById('viewMonth');
         const viewWeekBtn = document.getElementById('viewWeek');
+        const viewMonthFullBtn = document.getElementById('viewMonthFull');
         const searchBtn = document.getElementById('searchBtn');
         const clientDateInput = document.getElementById('clientDate');
         const clientDateSummaryInput = document.getElementById('clientDateSummary');
@@ -801,8 +803,14 @@
 
         async function render() {
           if (state.view === 'week') {
+            gridEl.setAttribute('role', 'grid');
             return renderWeek();
           }
+          if (state.view === 'month-full') {
+            gridEl.setAttribute('role', 'list');
+            return renderMonthFull();
+          }
+          gridEl.setAttribute('role', 'grid');
           const { year, month } = state;
           titleEl.textContent = monthNames[month] + ' ' + year;
 
@@ -955,6 +963,58 @@
           attachClientDetailHandlers(gridEl);
         }
 
+        async function renderMonthFull() {
+          const { year, month } = state;
+          titleEl.textContent = `${monthNames[month]} ${year} — todos los clientes`;
+          const summary = await fetchSummary(year, month);
+          const daysInMonth = new Date(year, month + 1, 0).getDate();
+          const dowLabels = ['Do','Lu','Ma','Mi','Ju','Vi','Sa'];
+          const items = [];
+
+          for (let day = 1; day <= daysInMonth; day++) {
+            const dateObj = new Date(Date.UTC(year, month, day));
+            const dow = dowLabels[dateObj.getUTCDay()];
+            const iso = `${year}-${String(month + 1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+            const info = summary[iso];
+            const count = info ? Number(info.count) : 0;
+            const entries = info && Array.isArray(info.clients)
+              ? info.clients.map((client) => buildCalendarEntry(client, iso)).filter(Boolean).join('')
+              : '';
+            const emptyMessage = '<p class="calendar-full__empty">Sin clientes</p>';
+            items.push(`
+              <article class="calendar-full__day" data-iso="${iso}" data-count="${count}">
+                <header class="calendar-full__head">
+                  <div class="calendar-full__label">
+                    <span class="calendar-full__dow">${dow}</span>
+                    <span class="calendar-full__date">${String(day).padStart(2,'0')}</span>
+                  </div>
+                  <div class="calendar-full__actions">
+                    ${count > 0 ? `<span class="calendar__badge" data-count="${count}" data-see="${iso}" title="Ver ${count} cliente(s)">${count}</span>` : ''}
+                    <button type="button" class="calendar-full__open" data-open-day="${iso}" aria-label="Abrir ${String(day).padStart(2,'0')}/${String(month + 1).padStart(2,'0')}">Gestionar</button>
+                  </div>
+                </header>
+                ${entries ? `<ul class="calendar__names calendar-full__names">${entries}</ul>` : emptyMessage}
+              </article>
+            `);
+          }
+
+          gridEl.innerHTML = items.join('');
+          gridEl.querySelectorAll('.calendar-full__open').forEach((btn) => {
+            btn.addEventListener('click', () => {
+              const iso = btn.getAttribute('data-open-day');
+              if (iso) openModal(iso);
+            });
+          });
+          gridEl.querySelectorAll('.calendar__badge[data-see]').forEach((badge) => {
+            badge.addEventListener('click', (e) => {
+              e.stopPropagation();
+              const iso = badge.getAttribute('data-see');
+              if (iso) openModal(iso);
+            });
+          });
+          attachClientDetailHandlers(gridEl);
+        }
+
         function addMonth(delta) {
           const d = new Date(state.year, state.month + delta, 1);
           state.year = d.getFullYear();
@@ -969,8 +1029,14 @@
         }
 
         // Navegación según vista
-        prevBtn.addEventListener('click', () => state.view === 'month' ? addMonth(-1) : addWeek(-1));
-        nextBtn.addEventListener('click', () => state.view === 'month' ? addMonth(1) : addWeek(1));
+        prevBtn.addEventListener('click', () => {
+          if (state.view === 'week') addWeek(-1);
+          else addMonth(-1);
+        });
+        nextBtn.addEventListener('click', () => {
+          if (state.view === 'week') addWeek(1);
+          else addMonth(1);
+        });
         if (miniCalPrevBtn) miniCalPrevBtn.addEventListener('click', () => shiftMiniCalMonth(-1));
         if (miniCalNextBtn) miniCalNextBtn.addEventListener('click', () => shiftMiniCalMonth(1));
 
@@ -981,13 +1047,16 @@
           state.view = view;
           viewMonthBtn.classList.toggle('is-active', view === 'month');
           viewWeekBtn.classList.toggle('is-active', view === 'week');
+          if (viewMonthFullBtn) viewMonthFullBtn.classList.toggle('is-active', view === 'month-full');
           if (calendarContainer) {
             calendarContainer.classList.toggle('is-week', view === 'week');
-            calendarContainer.classList.toggle('is-month', view !== 'week');
+            calendarContainer.classList.toggle('is-month', view === 'month');
+            calendarContainer.classList.toggle('is-month-full', view === 'month-full');
           }
           viewMonthBtn.setAttribute('aria-selected', view === 'month' ? 'true' : 'false');
           viewWeekBtn.setAttribute('aria-selected', view === 'week' ? 'true' : 'false');
-          
+          if (viewMonthFullBtn) viewMonthFullBtn.setAttribute('aria-selected', view === 'month-full' ? 'true' : 'false');
+
           // Si cambiamos a vista semanal y se proporciona una fecha, centrar en esa semana
           if (view === 'week' && date) {
             state.weekAnchor = new Date(date);
@@ -996,12 +1065,13 @@
           else if (view === 'week' && !state.weekAnchor) {
             state.weekAnchor = new Date();
           }
-          
+
           render();
         }
         
         viewMonthBtn.addEventListener('click', () => setView('month'));
         viewWeekBtn.addEventListener('click', () => setView('week'));
+        if (viewMonthFullBtn) viewMonthFullBtn.addEventListener('click', () => setView('month-full'));
 
         // Cerrar modal
         document.querySelectorAll('[data-close-modal]').forEach(el => {
