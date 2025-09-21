@@ -197,6 +197,8 @@
         })();
 
         const titleEl = document.getElementById('calTitle');
+        const calendarContainer = document.querySelector('.calendar');
+        if (calendarContainer) calendarContainer.classList.add('is-month');
         const gridEl = document.getElementById('calGrid');
         const prevBtn = document.getElementById('prevBtn');
         const nextBtn = document.getElementById('nextBtn');
@@ -979,6 +981,10 @@
           state.view = view;
           viewMonthBtn.classList.toggle('is-active', view === 'month');
           viewWeekBtn.classList.toggle('is-active', view === 'week');
+          if (calendarContainer) {
+            calendarContainer.classList.toggle('is-week', view === 'week');
+            calendarContainer.classList.toggle('is-month', view !== 'week');
+          }
           viewMonthBtn.setAttribute('aria-selected', view === 'month' ? 'true' : 'false');
           viewWeekBtn.setAttribute('aria-selected', view === 'week' ? 'true' : 'false');
           

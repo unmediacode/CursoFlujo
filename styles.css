@@ -596,6 +596,14 @@ small.muted { color: var(--muted); }
 }
 .calendar__names .more { color: var(--muted); font-style: italic; }
 
+.calendar.is-week .calendar__names {
+  max-height: none;
+  overflow: visible;
+}
+.calendar.is-week .calendar__cell {
+  min-height: auto;
+}
+
 .help {
   margin: 72px auto 48px;
 }
