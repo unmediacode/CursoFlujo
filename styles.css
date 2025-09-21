@@ -338,8 +338,8 @@ small.muted { color: var(--muted); }
   list-style: none;
   margin: 12px 0 0;
   padding: 0;
-  max-height: 240px;
-  overflow: auto;
+  max-height: none;
+  overflow: visible;
   border-top: 1px dashed var(--border);
 }
 .client-list li {
@@ -512,13 +512,16 @@ small.muted { color: var(--muted); }
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  background: #007bff;
-  color: white;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 12px;
   font-weight: bold;
+  color: white;
+  background: #007bff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
   transition: all 0.2s ease;
   border: 2px solid white;
@@ -543,6 +546,16 @@ small.muted { color: var(--muted); }
   font-size: .8rem;
   line-height: 22px;
   text-align: center;
+}
+.calendar__badge[data-count="7"],
+.calendar__badge[data-count="8"],
+.calendar__badge[data-count="9"] {
+  background: #f97316;
+  border-color: color-mix(in oklab, #f97316 70%, white);
+}
+.calendar__badge[data-count="10"] {
+  background: #ef4444;
+  border-color: color-mix(in oklab, #ef4444 70%, white);
 }
 .calendar__names {
   margin: 8px 0 0;

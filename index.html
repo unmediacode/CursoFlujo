@@ -850,9 +850,9 @@
             return `
               <button class="calendar__cell${inOtherMonth ? ' is-other' : ''}${isToday ? ' is-today' : ''}${isWeekend ? ' is-weekend' : ''}"
                       role="gridcell" aria-selected="${isToday ? 'true' : 'false'}"
-                      tabindex="${idx === 0 ? '0' : '-1'}" data-day="${dayNum}" data-iso="${dayISO}" data-weekend="${isWeekend}" data-other="${inOtherMonth}">
+                      tabindex="${idx === 0 ? '0' : '-1'}" data-day="${dayNum}" data-iso="${dayISO}" data-weekend="${isWeekend}" data-other="${inOtherMonth}" data-count="${count}">
                 <span class="calendar__date">${dayNum}</span>
-                ${inThisMonth && count > 0 ? `<span class="calendar__badge" title="Ver ${count} cliente(s)" data-see="${dayISO}">${count}</span>` : ''}
+                ${inThisMonth && count > 0 ? `<span class="calendar__badge" data-count="${count}" title="Ver ${count} cliente(s)" data-see="${dayISO}">${count}</span>` : ''}
                 ${entries ? `<ul class="calendar__names">${entries}</ul>` : ''}
               </button>
             `;
@@ -925,10 +925,10 @@
             return `
               <button class="calendar__cell${isToday ? ' is-today' : ''}${isWeekend ? ' is-weekend' : ''}"
                       role="gridcell" aria-selected="${isToday ? 'true' : 'false'}"
-                      data-iso="${iso}" data-weekend="${isWeekend}" data-other="false">
+                      data-iso="${iso}" data-weekend="${isWeekend}" data-other="false" data-count="${count}">
                 <div class="calendar__dow">${dow[idx]}</div>
                 <span class="calendar__date">${d.getUTCDate()}</span>
-                ${count > 0 ? `<span class=\"calendar__badge\" title=\"Ver ${count} cliente(s)\" data-see=\"${iso}\">${count}</span>` : ''}
+                ${count > 0 ? `<span class=\"calendar__badge\" data-count=\"${count}\" title=\"Ver ${count} cliente(s)\" data-see=\"${iso}\">${count}</span>` : ''}
                 ${namesList ? `<ul class=\"calendar__names\">${namesList}</ul>` : ''}
               </button>
             `;
